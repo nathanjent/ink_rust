@@ -1,0 +1,18 @@
+[package]
+
+name = "ink_rust"
+version = "0.0.1"
+authors = [ "Your name <nathanjent@nathanjent.com>" ]
+
+[[bin]]
+
+name = "ink_rust"
+
+[dependencies]
+conrod = "0.36.1"
+piston2d-graphics = "0.16.0"
+find_folder = "0.3.0"
+piston_window = "0.48.0"
+rand = "0.3.13"
+svg = "0.2.0"
+xml-rs = "0.3.4"
