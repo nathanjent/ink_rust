@@ -2,7 +2,10 @@ extern crate xml;
 
 use std::fs::File;
 use std::io::BufReader;
+use std::sync::{Arc, Mutex};
+use std::collections::BTreeMap;
 
+use xml::EventWriter;
 use xml::reader::{EventReader, XmlEvent};
 
 mod doc;
@@ -19,13 +22,21 @@ fn main() {
     let file = BufReader::new(file);
 
     let parser = EventReader::new(file);
+    let mut document = BTreeMap::new();
+    
     let mut depth = 0;
     for e in parser {
         match e {
             Ok(XmlEvent::StartDocument { version, encoding, standalone }) => {
                 match standalone {
-                    Some(s) => println!("{} {} {}", version, encoding, s),
-                    None => println!("{} {}", version, encoding),
+                    Some(s) => {
+                    	let xml_str = format!("{} {} {}", version, encoding, s);
+						document.insert(depth, doc::node::Node::new(xml_str, doc::node::NodeType::Document));
+                    	println!("{} {} {}", version, encoding, s)
+                    },
+                    None => {
+                    	println!("{} {}", version, encoding)
+                    },
                 }
             }
             Ok(XmlEvent::EndDocument) => {
