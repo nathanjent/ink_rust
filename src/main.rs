@@ -2,10 +2,9 @@ extern crate xml;
 
 use std::fs::File;
 use std::io::BufReader;
-use std::sync::{Arc, Mutex};
 use std::collections::BTreeMap;
 
-use xml::EventWriter;
+use xml::{EventWriter, ParserConfig};
 use xml::reader::{EventReader, XmlEvent};
 
 mod doc;
@@ -20,23 +19,25 @@ fn indent(size: usize) -> String {
 fn main() {
     let file = File::open("tests/documents/testrect.svg").unwrap();
     let file = BufReader::new(file);
-
-    let parser = EventReader::new(file);
+    let reader = ParserConfig::new()
+        .whitespace_to_characters(true)
+        .ignore_comments(false)
+        .create_reader(BufReader::new(file));
     let mut document = BTreeMap::new();
-    
+
     let mut depth = 0;
-    for e in parser {
+    for e in reader {
         match e {
             Ok(XmlEvent::StartDocument { version, encoding, standalone }) => {
                 match standalone {
                     Some(s) => {
-                    	let xml_str = format!("{} {} {}", version, encoding, s);
-						document.insert(depth, doc::node::Node::new(xml_str, doc::node::NodeType::Document));
-                    	println!("{} {} {}", version, encoding, s)
-                    },
-                    None => {
-                    	println!("{} {}", version, encoding)
-                    },
+                        let xml_str = format!("{} {} {}", version, encoding, s);
+                        document.insert(depth,
+                                        doc::node::Node::new(xml_str,
+                                                             doc::node::NodeType::Document));
+                        println!("{} {} {}", version, encoding, s)
+                    }
+                    None => println!("{} {}", version, encoding),
                 }
             }
             Ok(XmlEvent::EndDocument) => {

@@ -1,5 +1,4 @@
-use std::cell::{Ref, RefMut, RefCell};
-use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 
 pub struct Node<T> {
     elem: T,
@@ -15,20 +14,22 @@ pub struct Node<T> {
 /// e.g. <?xml version="1.0" encoding="utf-8" standalone="no"?>
 pub enum NodeType {
     Document,
-    Element { elem_type: ElementType },
+    Element {
+        elem_type: ElementType,
+    },
     Text,
     Comment,
     Pi,
 }
 
 pub enum ElementType {
-	Rect,
-	Svg,
+    Rect,
+    Svg,
 }
 
 impl<T> Node<T> {
-    pub fn new(elem: T, node_type: NodeType) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Node {
+    pub fn new(elem: T, node_type: NodeType) -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Node {
             elem: elem,
             node_type: node_type,
         }))
