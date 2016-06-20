@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex};
+use xml;
 
-pub struct Node<T> {
-    elem: T,
+pub struct Node {
+    pub id: u32,
+    attributes: Vec<xml::attribute::OwnedAttribute>,
     node_type: NodeType,
 }
 
@@ -27,11 +28,15 @@ pub enum ElementType {
     Svg,
 }
 
-impl<T> Node<T> {
-    pub fn new(elem: T, node_type: NodeType) -> Arc<Mutex<Self>> {
-        Arc::new(Mutex::new(Node {
-            elem: elem,
+impl Node {
+    pub fn new(id: u32,
+               attributes: Vec<xml::attribute::OwnedAttribute>,
+               node_type: NodeType)
+               -> Self {
+        Node {
+            id: id,
+            attributes: attributes,
             node_type: node_type,
-        }))
+        }
     }
 }

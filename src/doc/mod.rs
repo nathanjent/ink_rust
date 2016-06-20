@@ -1,2 +1,2 @@
 pub mod node;
-mod document;
+pub mod document;
