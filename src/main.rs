@@ -1,23 +1,27 @@
+#[macro_use]
+extern crate conrod;
 extern crate xml;
+extern crate piston_window;
+extern crate find_folder;
 
 use std::fs::File;
-use std::io::{BufReader, Read};
-use std::sync::RwLock;
+use std::io::Read;
 
-use xml::{Event, Parser, Element};
+use conrod::{Theme, Widget};
+use piston_window::*;
+
+use xml::{Parser, ElementBuilder};
+
+/// Conrod is backend agnostic. Here, we define the `piston_window` backend to use for our `Ui`.
+type Backend = (piston_window::G2dTexture<'static>, piston_window::Glyphs);
+type Ui = conrod::Ui<Backend>;
+type UiCell<'a> = conrod::UiCell<'a, Backend>;
 
 // mod doc;
 
-fn indent(size: usize) -> String {
-    const INDENT: &'static str = "    ";
-    (0..size)
-        .map(|_| INDENT)
-        .fold(String::with_capacity(size * INDENT.len()), |r, s| r + s)
-}
-
 fn main() {
+
     let mut file = File::open("tests/documents/testrect.svg").unwrap();
-    //    let file = BufReader::new(file);
 
     let mut file_string = String::new();
     if let Err(err) = file.read_to_string(&mut file_string) {
@@ -25,62 +29,89 @@ fn main() {
         std::process::exit(1);
     };
     let mut parser = Parser::new();
+    let mut eb = ElementBuilder::new();
 
     parser.feed_str(&file_string);
-    for event in parser {
-        match event.unwrap() {
-            Event::ElementStart(tag) => println!("<{}>", tag.name),
-            Event::ElementEnd(tag) => println!("</{}>", tag.name),
-            _ => (),
-        }
+    let doc = parser.filter_map(|x| eb.handle_event(x));
+
+    // Construct the window.
+    let mut window: PistonWindow = WindowSettings::new("Inkrust", [720, 360])
+                                       .opengl(piston_window::OpenGL::V3_2)
+                                       .samples(4)
+                                       .exit_on_esc(true)
+                                       .build()
+                                       .unwrap();
+
+    // Construct our `Ui`.
+    let mut ui = {
+        let assets = find_folder::Search::KidsThenParents(3, 5)
+                         .for_folder("assets")
+                         .unwrap();
+        let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
+        let theme = Theme::default();
+        let glyph_cache = piston_window::Glyphs::new(&font_path, window.factory.clone()).unwrap();
+        Ui::new(glyph_cache, theme)
+    };
+
+    window.set_ups(60);
+
+    for elem in doc {
+        let e = elem.unwrap();
+
+        println!("{}", e);
     }
 
-    //    let reader = parserconfig::new()
-    //        .whitespace_to_characters(true)
-    //        .ignore_comments(true)
-    //        .create_reader(bufreader::new(file));
-    //
-    //    let document = rwlock::new(doc::document::document::new());
-    //
-    //    let mut depth = 0;
-    //    for e in reader {
-    //        match e {
-    //            ok(xmlEvent::StartDocument { version, encoding, standalone }) => {
-    //                document.write().unwrap().set_version(version);
-    //                document.write().unwrap().set_encoding(&encoding);
-    //                document.write().unwrap().set_standalone(standalone.unwrap_or_default());
-    //            }
-    //            Ok(XmlEventa:EndDocument) => {
-    //                println!("End");
-    //            }
-    //            Ok(XmlEvent::StartElement { name, attributes, namespace }) => {
-    //                let node = doc::node::Node::new(0,
-    //                                                attributes,
-    //                                                doc::node::NodeType::Element {
-    //                                                    elem_type: doc::node::ElementType::Rect,
-    //                                                });
-    //                document.write().unwrap().add(node);
-    //                println!("{}+{}", indent(depth), name);
-    //                depth += 1;
-    //            }
-    //            Ok(XmlEvent::EndElement { name }) => {
-    //                depth -= 1;
-    //                println!("{}-{}", indent(depth), name);
-    //            }
-    //            Ok(XmlEvent::CData(data)) => {
-    //                println!("{}", data);
-    //            }
-    //            Ok(XmlEvent::Characters(data)) => {
-    //                println!("{}", data);
-    //            }
-    //            Ok(XmlEvent::ProcessingInstruction { name, data }) => {
-    //                println!("{} {}", name, data.unwrap_or_default());
-    //            }
-    //            Err(e) => {
-    //                println!("Error: {}", e);
-    //                break;
-    //            }
-    //            _ => {}
-    //        }
-    //    }
+    // Poll events from the window.
+    while let Some(event) = window.next() {
+        ui.handle_event(event.clone());
+        event.update(|_| ui.set_widgets(set_ui));
+        window.draw_2d(&event, |c, g| ui.draw_if_changed(c, g));
+    }
+
+    // Declare the `WidgetId`s and instantiate the widgets.
+    fn set_ui(ref mut ui: UiCell) {
+        use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle};
+        use std::iter::once;
+
+        // Generate a unique const `WidgetId` for each widget.
+        widget_ids!{
+	        CANVAS,
+	        LINE,
+	        POINT_PATH,
+	        RECTANGLE_FILL,
+	        RECTANGLE_OUTLINE,
+	        TRAPEZOID,
+	        OVAL_FILL,
+	        OVAL_OUTLINE,
+	        CIRCLE,
+	    };
+
+        // The background canvas upon which we'll place our widgets.
+        Canvas::new().pad(80.0).set(CANVAS, ui);
+
+        Line::centred([-40.0, -40.0], [40.0, 40.0]).top_left_of(CANVAS).set(LINE, ui);
+
+        let left = [-40.0, -40.0];
+        let top = [0.0, 40.0];
+        let right = [40.0, -40.0];
+        let points = once(left).chain(once(top)).chain(once(right));
+        PointPath::centred(points).down(80.0).set(POINT_PATH, ui);
+
+        Rectangle::fill([80.0, 80.0]).down(80.0).set(RECTANGLE_FILL, ui);
+
+        Rectangle::outline([80.0, 80.0]).down(80.0).set(RECTANGLE_OUTLINE, ui);
+
+        let bl = [-40.0, -40.0];
+        let tl = [-20.0, 40.0];
+        let tr = [20.0, 40.0];
+        let br = [40.0, -40.0];
+        let points = once(bl).chain(once(tl)).chain(once(tr)).chain(once(br));
+        Polygon::centred_fill(points).right_from(LINE, 80.0).set(TRAPEZOID, ui);
+
+        Oval::fill([40.0, 80.0]).down(80.0).align_middle_x().set(OVAL_FILL, ui);
+
+        Oval::outline([80.0, 40.0]).down(100.0).align_middle_x().set(OVAL_OUTLINE, ui);
+
+        Circle::fill(40.0).down(100.0).align_middle_x().set(CIRCLE, ui);
+    }
 }
