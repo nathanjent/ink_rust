@@ -5,6 +5,7 @@ dependencies = [
  "RustyXML 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "conrod 0.36.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "find_folder 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lyon 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston2d-graphics 0.16.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "piston_window 0.48.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -421,6 +422,49 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "lyon"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "lyon_core 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lyon_extra 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lyon_tesselation 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "lyon_core"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "sid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sid_vec 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vodk_math 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "lyon_extra"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "lyon_core 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sid_vec 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vodk_math 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "lyon_tesselation"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "lyon_core 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lyon_extra 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sid_vec 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vodk_math 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "lzw"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -794,6 +838,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sid"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "sid_vec"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "sid 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "stb_truetype"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -839,6 +896,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "piston-float 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "vodk_math"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "wayland-client"

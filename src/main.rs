@@ -3,13 +3,22 @@ extern crate conrod;
 extern crate xml;
 extern crate piston_window;
 extern crate find_folder;
+extern crate graphics;
+extern crate lyon;
+
+mod doc;
+
+use doc::document::{Document};
 
 use std::fs::File;
 use std::io::Read;
 use std::sync::mpsc;
+use std::cell::{RefCell};
 
 use conrod::{Theme, Widget};
 use piston_window::*;
+
+use lyon::path_builder::*;
 
 use xml::{Parser, Element, ElementBuilder};
 
@@ -18,26 +27,29 @@ type Backend = (piston_window::G2dTexture<'static>, piston_window::Glyphs);
 type Ui = conrod::Ui<Backend>;
 type UiCell<'a> = conrod::UiCell<'a, Backend>;
 
-// mod doc;
-
 struct InkApp {
-    document: Option<ElementBuilder>,
+    document: RefCell<Option<Document>>,
 
-        elem_sender: mpsc::Sender<(usize, usize, bool)>,
-            elem_receiver: mpsc::Receiver<(usize, usize, bool)>,
+    elem_sender: mpsc::Sender<(usize, usize, bool)>,
+    elem_receiver: mpsc::Receiver<(usize, usize, bool)>,
 }
 
 impl InkApp {
     fn new() -> Self {
         let (elem_sender, elem_receiver) = mpsc::channel();
-        InkApp { document: None, 
+        InkApp {
+            document: RefCell::new(None),
             elem_sender: elem_sender,
-                        elem_receiver: elem_receiver,
+            elem_receiver: elem_receiver,
         }
     }
 
-    fn setDocument(&mut self, document: ElementBuilder) {
-        self.document = Some(document);
+    fn set_document(&mut self, document: Document) {
+        self.document = RefCell::new(Some(document));
+    }
+    
+    fn get_document(&self) -> Option<Document> {
+    	self.document.clone().into_inner()
     }
 }
 
@@ -54,23 +66,27 @@ fn main() {
     let mut eb = ElementBuilder::new();
 
     parser.feed_str(&file_string);
-    let doc = parser.filter_map(|x| eb.handle_event(x));
+    let elements = parser.filter_map(|x| eb.handle_event(x)).map(|x| x.unwrap()).collect();
+
+	let mut doc = Document::new();
+	doc.set_tree(elements);
+
     let mut app = InkApp::new();
-    app.setDocument(eb);
+    app.set_document(doc);
 
     // Construct the window.
     let mut window: PistonWindow = WindowSettings::new("Inkrust", [720, 360])
-        .opengl(piston_window::OpenGL::V3_2)
-        .samples(4)
-        .exit_on_esc(true)
-        .build()
-        .unwrap();
+                                       .opengl(piston_window::OpenGL::V3_2)
+                                       .samples(4)
+                                       .exit_on_esc(true)
+                                       .build()
+                                       .unwrap();
 
     // Construct our `Ui`.
     let mut ui = {
         let assets = find_folder::Search::KidsThenParents(3, 5)
-            .for_folder("assets")
-            .unwrap();
+                         .for_folder("assets")
+                         .unwrap();
         let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
         let theme = Theme::default();
         let glyph_cache = piston_window::Glyphs::new(&font_path, window.factory.clone()).unwrap();
@@ -92,6 +108,8 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
     use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle};
     use std::iter::once;
 
+	let tree = app.get_document().unwrap().get_tree();
+	
     // Generate a unique const `WidgetId` for each widget.
     widget_ids!{
 	        CANVAS,
