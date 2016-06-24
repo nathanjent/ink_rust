@@ -8,6 +8,13 @@ authors = [ "Nathan Jent <nathanjent@nathanjent.com>" ]
 
 name = "ink_rust"
 
+[dev-dependencies]
+serde = "0.7.9"
+
+
+[build-dependencies]
+serde_codegen = "0.7.11"
+
 [dependencies]
 conrod = "0.36.1"
 piston2d-graphics = "0.16.0"
@@ -16,3 +23,4 @@ piston_window = "0.48.0"
 rand = "0.3.13"
 RustyXML = "0.1.1"
 lyon = "0.0.2"
+serde_xml = "0.7.0"
