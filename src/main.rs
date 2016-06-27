@@ -1,26 +1,29 @@
 #[macro_use]
 extern crate conrod;
-extern crate xml;
 extern crate piston_window;
 extern crate find_folder;
 extern crate graphics;
 extern crate lyon;
-
-mod doc;
-
-use doc::document::{Document};
+extern crate xml5ever;
 
 use std::fs::File;
 use std::io::Read;
 use std::sync::mpsc;
-use std::cell::{RefCell};
+use std::default::Default;
+use std::iter;
+use std::string::String;
 
 use conrod::{Theme, Widget};
 use piston_window::*;
 
 use lyon::path_builder::*;
 
-use xml::{Parser, Element, ElementBuilder};
+
+use xml5ever::tendril::{SliceExt};
+use xml5ever::{parse};
+use xml5ever::tree_builder::{TreeSink};
+use xml5ever::rcdom;
+use xml5ever::rcdom::{Document, Element, RcDom, Handle};
 
 /// Conrod is backend agnostic. Here, we define the `piston_window` backend to use for our `Ui`.
 type Backend = (piston_window::G2dTexture<'static>, piston_window::Glyphs);
@@ -28,8 +31,7 @@ type Ui = conrod::Ui<Backend>;
 type UiCell<'a> = conrod::UiCell<'a, Backend>;
 
 struct InkApp {
-    document: RefCell<Option<Document>>,
-
+    dom: RcDom,
     elem_sender: mpsc::Sender<(usize, usize, bool)>,
     elem_receiver: mpsc::Receiver<(usize, usize, bool)>,
 }
@@ -38,23 +40,24 @@ impl InkApp {
     fn new() -> Self {
         let (elem_sender, elem_receiver) = mpsc::channel();
         InkApp {
-            document: RefCell::new(None),
+            dom: RcDom::default(),
             elem_sender: elem_sender,
             elem_receiver: elem_receiver,
         }
     }
 
-    fn set_document(&mut self, document: Document) {
-        self.document = RefCell::new(Some(document));
+    fn set_dom(&mut self, dom: RcDom) {
+        self.dom = dom;
     }
     
-    fn get_document(&self) -> Option<Document> {
-    	self.document.clone().into_inner()
+    fn get_doc_handle(&mut self) -> Handle {
+    	self.dom.get_document()
     }
 }
 
 fn main() {
-
+    let mut app = InkApp::new();
+    
     let mut file = File::open("tests/documents/testrect.svg").unwrap();
 
     let mut file_string = String::new();
@@ -62,17 +65,11 @@ fn main() {
         println!("Reading failed: {}", err);
         std::process::exit(1);
     };
-    let mut parser = Parser::new();
-    let mut eb = ElementBuilder::new();
 
-    parser.feed_str(&file_string);
-    let elements = parser.filter_map(|x| eb.handle_event(x)).map(|x| x.unwrap()).collect();
+	let input = file_string.to_tendril();
 
-	let mut doc = Document::new();
-	doc.set_tree(elements);
-
-    let mut app = InkApp::new();
-    app.set_document(doc);
+    let dom: RcDom = parse(iter::once(input), Default::default());
+    app.set_dom(dom);
 
     // Construct the window.
     let mut window: PistonWindow = WindowSettings::new("Inkrust", [720, 360])
@@ -108,7 +105,8 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
     use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle};
     use std::iter::once;
 
-	let tree = app.get_document().unwrap().get_tree();
+	let doc = app.get_doc_handle();
+	walk("", doc);
 	
     // Generate a unique const `WidgetId` for each widget.
     widget_ids!{
@@ -150,4 +148,45 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
     Oval::outline([80.0, 40.0]).down(100.0).align_middle_x().set(OVAL_OUTLINE, ui);
 
     Circle::fill(40.0).down(100.0).align_middle_x().set(CIRCLE, ui);
+}
+
+pub fn escape_default(s: &str) -> String {
+    s.chars().flat_map(|c| c.escape_default()).collect()
+}
+
+fn walk(prefix: &str, handle: Handle) {
+    let node = handle.borrow();
+
+    print!("{}", prefix);
+    match node.node {
+        Document
+            => println!("#document"),
+
+        rcdom::Text(ref text)  => {
+            println!("#text {}", escape_default(text))
+        },
+
+        Element(ref name, _) => {
+            println!("{}", name.local);
+        },
+
+        _ => {},
+
+    }
+
+    let new_indent = {
+        let mut temp = String::new();
+        temp.push_str(prefix);
+        temp.push_str("    ");
+        temp
+    };
+
+    for child in node.children.iter()
+        .filter(|child| match child.borrow().node {
+            rcdom::Text(_) | Element (_, _) => true,
+            _ => false,
+        }
+    ) {
+        walk(&new_indent, child.clone());
+    }
 }
