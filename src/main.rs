@@ -102,7 +102,7 @@ fn main() {
 
 // Declare the `WidgetId`s and instantiate the widgets.
 fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
-    use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle};
+    use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle, XYPad};
     use std::iter::once;
 
     let doc = app.get_doc_handle();
@@ -110,14 +110,17 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
 
     // Generate a unique const `WidgetId` for each widget.
     widget_ids!{
-	        CANVAS,
-	        LINE,
-	        POINT_PATH,
-	        TRAPEZOID,
-	        OVAL_FILL,
-	        OVAL_OUTLINE,
-	        CIRCLE,
-	    };
+        CANVAS,
+        LINE,
+        POINT_PATH,
+        RECTANGLE_FILL,
+        RECTANGLE_OUTLINE,
+        TRAPEZOID,
+        OVAL_FILL,
+        OVAL_OUTLINE,
+        CIRCLE,
+        XYPAD,
+    };
 
     // The background canvas upon which we'll place our widgets.
     Canvas::new().pad(80.0).set(CANVAS, ui);
@@ -129,6 +132,10 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
     let right = [40.0, -40.0];
     let points = once(left).chain(once(top)).chain(once(right));
     PointPath::centred(points).down(80.0).set(POINT_PATH, ui);
+    
+    Rectangle::fill([80.0, 80.0]).down(80.0).set(RECTANGLE_FILL, ui);
+
+    Rectangle::outline([80.0, 80.0]).down(80.0).set(RECTANGLE_OUTLINE, ui);
 
     let bl = [-40.0, -40.0];
     let tl = [-20.0, 40.0];
@@ -142,6 +149,8 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
     Oval::outline([80.0, 40.0]).down(100.0).align_middle_x().set(OVAL_OUTLINE, ui);
 
     Circle::fill(40.0).down(100.0).align_middle_x().set(CIRCLE, ui);
+    
+//    XYPad::new(0.0, 0.0, 200.0, 0.0, 0.0, 200.0).w_h(150.0, 150.0).set(XYPAD, ui);
 }
 
 pub fn escape_default(s: &str) -> String {
@@ -149,7 +158,6 @@ pub fn escape_default(s: &str) -> String {
 }
 
 fn walk(prefix: &str, ui: &mut UiCell, handle: Handle) {
-    use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle};
     let node = handle.borrow();
 
     print!("{}", prefix);
@@ -158,28 +166,27 @@ fn walk(prefix: &str, ui: &mut UiCell, handle: Handle) {
 
         rcdom::Text(ref text) => println!("#text {}", escape_default(text)),
 
-        Element(ref name, ref attr) => {
-            println!("{}", name.local);
-
-            {
-                let map = attr.iter().map(|a| {
-                    (a.name, a.value)
-                });
-                for pair in map {
-                    println!("{:?}", pair);
-                }
-                widget_ids!{
-                    RECTANGLE_FILL,
-                    RECTANGLE_OUTLINE,
-                };
-                Rectangle::fill([80.0, 80.0]).down(80.0).set(RECTANGLE_FILL, ui);
-
-                Rectangle::outline([80.0, 80.0]).down(80.0).set(RECTANGLE_OUTLINE, ui);
+        Element(ref name, ref attrs) => {
+        	let lname = name.local.as_ref();
+            println!("{:?}", lname);
+            match lname {
+            	"rect" => {
+            		let mut attr_it = attrs.into_iter();
+//            		let x = attr_it.find(|&a| a.name.local.as_ref() == "x");
+//            		let y = attr_it.find(|&a| a.name.local.as_ref() == "y");
+            		let width = attr_it.inspect(|&x| println!("{:?}", x)).find(|&a| a.name.local.as_ref() == "width");
+//            		let height = attr_it.find(|&a| a.name.local.as_ref() == "height");
+//            		let x = attr_it.find(|&a| a.name.local.as_ref() == "rx");
+//            		let y = attr_it.find(|&a| a.name.local.as_ref() == "ry");
+//                	println!("{:?}", x);
+//                	println!("{:?}", y);
+                	println!("{:?}", width);
+//                	println!("{:?}", height);
+            	}
+            	_ => {}
             }
         }
-
         _ => {}
-
     }
 
     let new_indent = {
