@@ -5,6 +5,7 @@ extern crate find_folder;
 extern crate graphics;
 extern crate lyon;
 extern crate xml5ever;
+extern crate encoding;
 
 use std::fs::File;
 use std::io::Read;
@@ -111,13 +112,12 @@ pub fn escape_default(s: &str) -> String {
 }
 
 fn walk(prefix: &str, ui: &mut UiCell, handle: Handle) {
-    use conrod::{Canvas, Rectangle};
-    use std::iter::once;
+    use conrod::{Canvas, Rectangle, Positionable};
 
     widget_ids!{
         CANVAS,
-        RECTANGLE_FILL,
-        RECTANGLE_OUTLINE,
+        RECTANGLE_FILL with 64,
+        RECTANGLE_OUTLINE with 64,
     };
     
     Canvas::new().pad(80.0).set(CANVAS, ui);
@@ -136,20 +136,26 @@ fn walk(prefix: &str, ui: &mut UiCell, handle: Handle) {
             match lname {
                 "rect" => {
                     let mut attr_it = attrs.into_iter();
-                    let id = attr_it.inspect(|&x| println!("{:?}", x))
-                        .find(|&a| a.name.local.as_ref() == "id");
-                    //            		let x = attr_it.find(|&a| a.name.local.as_ref() == "x");
+//                    let id = attr_it.inspect(|&x| println!("{:?}", x))
+//                        .find(|&a| a.name.local.as_ref() == "id");
+            		let x = attr_it
+            			.find(|&a| a.name.local.as_ref() == "x")
+            			.expect("Attribute empty")
+            			.value
+            			.parse::<f64>()
+            			.expect("Parse error");
                     //            		let y = attr_it.find(|&a| a.name.local.as_ref() == "y");
                     // let width = attr_it.inspect(|&x| println!("{:?}", x))
                     //    .find(|&a| a.name.local.as_ref() == "width");
                     //            		let height = attr_it.find(|&a| a.name.local.as_ref() == "height");
                     //            		let x = attr_it.find(|&a| a.name.local.as_ref() == "rx");
                     //            		let y = attr_it.find(|&a| a.name.local.as_ref() == "ry");
-                    println!("{:?}", id);
+                    println!("{:?}", x);
+//                    let id = id.expect("Attribute empty").value.parse::<usize>().expect("Parse error");
+														//TODO create widget id here
+                    Rectangle::fill([80.0, 80.0]).down(x).set(RECTANGLE_FILL, ui);
 
-                    Rectangle::fill([80.0, 80.0]).down(80.0).set(id, ui);
-
-                    Rectangle::outline([80.0, 80.0]).down(80.0).set(id, ui);
+                    Rectangle::outline([80.0, 80.0]).down(x).set(RECTANGLE_OUTLINE, ui);
                 }
                 _ => {}
             }
