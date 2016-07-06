@@ -6,6 +6,7 @@ extern crate graphics;
 extern crate lyon;
 extern crate xml5ever;
 extern crate encoding;
+extern crate cssparser;
 
 use std::fs::File;
 use std::io::Read;
@@ -57,8 +58,6 @@ impl InkApp {
 }
 
 fn main() {
-    let mut app = InkApp::new();
-
     let mut file = File::open("tests/documents/testrect.svg").unwrap();
 
     let mut file_string = String::new();
@@ -70,7 +69,6 @@ fn main() {
     let input = file_string.to_tendril();
 
     let dom: RcDom = parse(iter::once(input), Default::default());
-    app.set_dom(dom);
 
     // Construct the window.
     let mut window: PistonWindow = WindowSettings::new("Inkrust", [720, 360])
@@ -90,7 +88,10 @@ fn main() {
         let glyph_cache = piston_window::Glyphs::new(&font_path, window.factory.clone()).unwrap();
         Ui::new(glyph_cache, theme)
     };
-
+    
+    let mut app = InkApp::new();
+    app.set_dom(dom);
+    
     window.set_ups(60);
 
     // Poll events from the window.
@@ -103,6 +104,24 @@ fn main() {
 
 // Declare the `WidgetId`s and instantiate the widgets.
 fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
+    use conrod::{
+    	Canvas, 
+    	Rectangle, 
+    	Positionable
+    };
+
+    widget_ids!{
+        CANVAS,
+        RECTANGLE_FILL,
+        RECTANGLE_OUTLINE,
+    };
+    
+    Canvas::new().pad(80.0).set(CANVAS, ui);
+    
+    Rectangle::fill([40.0, 40.0]).down(40.0).set(RECTANGLE_FILL, ui);
+
+    Rectangle::outline([40.0, 40.0]).down(40.0).set(RECTANGLE_OUTLINE, ui);
+    
     let doc = app.get_doc_handle();
     walk("", ui, doc);
 }
@@ -112,16 +131,12 @@ pub fn escape_default(s: &str) -> String {
 }
 
 fn walk(prefix: &str, ui: &mut UiCell, handle: Handle) {
-    use conrod::{Canvas, Rectangle, Positionable};
-
-    widget_ids!{
-        CANVAS,
-        RECTANGLE_FILL with 64,
-        RECTANGLE_OUTLINE with 64,
-    };
-    
-    Canvas::new().pad(80.0).set(CANVAS, ui);
-
+	use conrod::Rectangle;
+	use conrod::Dimensions;
+	use conrod::ShapeStyle as Style;
+	use conrod::color::Color;
+	use cssparser::{Parser, Token, Color as CSSParserColor};
+	
     let node = handle.borrow();
 
     print!("{}", prefix);
@@ -135,27 +150,64 @@ fn walk(prefix: &str, ui: &mut UiCell, handle: Handle) {
             println!("{:?}", lname);
             match lname {
                 "rect" => {
-                    let mut attr_it = attrs.into_iter();
-//                    let id = attr_it.inspect(|&x| println!("{:?}", x))
-//                        .find(|&a| a.name.local.as_ref() == "id");
-            		let x = attr_it
-            			.find(|&a| a.name.local.as_ref() == "x")
-            			.expect("Attribute empty")
-            			.value
-            			.parse::<f64>()
-            			.expect("Parse error");
-                    //            		let y = attr_it.find(|&a| a.name.local.as_ref() == "y");
-                    // let width = attr_it.inspect(|&x| println!("{:?}", x))
-                    //    .find(|&a| a.name.local.as_ref() == "width");
-                    //            		let height = attr_it.find(|&a| a.name.local.as_ref() == "height");
-                    //            		let x = attr_it.find(|&a| a.name.local.as_ref() == "rx");
-                    //            		let y = attr_it.find(|&a| a.name.local.as_ref() == "ry");
-                    println!("{:?}", x);
-//                    let id = id.expect("Attribute empty").value.parse::<usize>().expect("Parse error");
-														//TODO create widget id here
-                    Rectangle::fill([80.0, 80.0]).down(x).set(RECTANGLE_FILL, ui);
-
-                    Rectangle::outline([80.0, 80.0]).down(x).set(RECTANGLE_OUTLINE, ui);
+                	let mut dim: Dimensions = [0.0, 0.0];
+                	let mut style = Style::fill();
+                	for attr in attrs {
+                		let key_val = (attr.name.local.as_ref(), attr.value.as_ref());
+                		match key_val {
+							w @ ("width", _) => {
+                				let (_, w) = w;
+			        			let w = w.parse::<f64>()
+			            			.expect("Parse error");
+		            			dim[0] = w;
+			                 	println!("{:?}", w);
+							}
+                			h @ ("height", _) => {
+                				let (_, h) = h;
+			        			let h = h.parse::<f64>()
+			            			.expect("Parse error");
+		            			dim[1] = h;
+			                    println!("{:?}", h);
+                			}
+                			i @ ("id", _) => {
+                				let (_, i) = i;
+                				println!("{:?}", i);
+                			}
+							s @ ("style", _) => {
+                				let (_, s) = s;
+                				let mut parser = Parser::new(&s);
+                				while !parser.is_exhausted() {
+									let token = parser
+									.next_including_whitespace_and_comments()
+									.expect("Style parsing error.");
+									match token {
+										Token::Ident(id) => println!("{:?} id", id),
+										Token::Hash(s) | Token::IDHash(s) => {
+											println!("{:?} i", s);
+										}
+										Token::AtKeyword(s) => println!("{:?} k", s),
+										Token::QuotedString(s) => println!("{:?} q", s),
+										Token::UnquotedUrl(s) => println!("{:?} u", s),
+										Token::Number(s) => println!("{:?} n", s),
+										Token::UnicodeRange(v, s) => println!("{:?}{:?} r", v, s),
+										Token::WhiteSpace(s) => println!("{:?} w", s),
+										Token::Dimension(v, s) => println!("{:?}{:?} d", v, s),
+										_ => { }
+									}
+//									let color = CSSParserColor::parse(&mut Parser::new(&s))
+//									.expect("Color parse error");
+//        							style.set_color(Color::Rgba(
+//        									color.red,
+//        									color.green,
+//        									color.blue,
+//        									color.alpha));
+                				}
+			                    println!("{:?}", s);
+							}
+							_ => {}
+                		}
+                	}
+                	let rect = Rectangle::styled(dim, style);
                 }
                 _ => {}
             }
