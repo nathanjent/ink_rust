@@ -34,8 +34,12 @@
      inkscape:window-y="-8"
      inkscape:window-maximized="1" />
   <rect
-         height="1080"
-         id="bgfill057"
-         style="fill:#A7CCD8"
-         width="1920" />
+        x="100"
+        y="100"
+        rx="5"
+        ry="5"
+        height="100"
+        id="bgfill057"
+        style="fill:#A7CCD8"
+        width="100" />
 </svg>

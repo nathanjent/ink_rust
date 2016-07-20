@@ -162,8 +162,163 @@ fn walk(prefix: &str, handle: Handle) {
     use conrod::Dimensions;
     use conrod::ShapeStyle as Style;
     use conrod::color::Color;
-    use cssparser::{Parser, DeclarationListParser, DeclarationParser, Token,
-                    Color as CSSParserColor, Delimiter};
+    use cssparser::{Parser, DeclarationListParser, DeclarationParser, AtRuleParser, Token,
+                    Color as CSSParserColor, Delimiter, parse_important, NumericValue, AtRuleType};
+
+    struct StyleParser;
+
+    struct Property {
+        name: String,
+        value: String,
+    }
+
+    impl DeclarationParser for StyleParser {
+        type Declaration = Property;
+
+
+        fn parse_value(&self, name: &str, input: &mut Parser) -> Result<Property, ()> {
+            let mut value = vec![];
+            loop {
+                let start_position = input.position();
+                if let Ok(mut token) = input.next() {
+                    if token == Token::Delim('!') {
+                        input.reset(start_position);
+                        if parse_important(input).is_ok() {
+                            if input.is_exhausted() {
+                                break;
+                            }
+                        }
+                        input.reset(start_position);
+                        token = input.next().unwrap();
+                    }
+                    value.push(one_component_value_to_string(token, input));
+                } else {
+                    break;
+                }
+            }
+
+            Ok(Property {
+                name: value[0],
+                value: value[1],
+            })
+        }
+    }
+
+
+    fn component_values(input: &mut Parser) -> Vec<String> {
+        let mut values = vec![];
+        while let Ok(token) = input.next_including_whitespace() {
+            values.push(one_component_value_to_string(token, input));
+        }
+        values
+    }
+
+    fn one_component_value_to_string(token: Token, input: &mut Parser) -> String {
+        //        fn numeric(value: NumericValue) -> Vec<f32> {
+        //            vec![
+        //                Token::Number(value).to_css_string().to_json(),
+        //                match value.int_value { Some(i) => i.to_json(), None => value.value.to_json() },
+        //                match value.int_value { Some(_) => "integer", None => "number" }.to_json()
+        //            ]
+        //        }
+
+        match token {
+            Token::Ident(v) => v.to_string(),
+            // Token::AtKeyword(v) => v,
+            Token::Hash(v) => v.to_string(),
+            Token::IDHash(v) => v.to_string(),
+            //            Token::QuotedString(v) => Property {name: "id", value: v},
+            //            Token::UnquotedUrl(v) => Property {name: "id", value: v},
+            //            Token::Delim(v) => Property {name: "id", value: v},
+            //
+            //            Token::Number(v) => Json::Array({
+            //                let mut v = vec!["number".to_json()];
+            //                v.extend(numeric(v));
+            //                v
+            //            }),
+            //            Token::Percentage(PercentageValue { unit_value, int_value, has_sign }) => Json::Array({
+            //                let mut v = vec!["percentage".to_json()];
+            //                v.extend(numeric(NumericValue {
+            //                    value: unit_value * 100.,
+            //                    int_value: int_value,
+            //                    has_sign: has_sign,
+            //                }));
+            //                v
+            //            }),
+            //            Token::Dimension(value, unit) => Json::Array({
+            //                let mut v = vec!["dimension".to_json()];
+            //                v.extend(numeric(value));
+            //                v.push(unit.to_json());
+            //                v
+            //            }),
+            //
+            //            Token::UnicodeRange(start, end) => Property {name: "id", value: v},
+            //
+            //            Token::WhiteSpace(_) => " ".to_json(),
+            //            Token::Comment(_) => "/**/".to_json(),
+            Token::Colon => "".to_string(),
+            //            Token::Semicolon => ";".to_json(),
+            //            Token::Comma => ",".to_json(),
+            //            Token::IncludeMatch => "~=".to_json(),
+            //            Token::DashMatch => "|=".to_json(),
+            //            Token::PrefixMatch => "^=".to_json(),
+            //            Token::SuffixMatch => "$=".to_json(),
+            //            Token::SubstringMatch => "*=".to_json(),
+            //            Token::Column => "||".to_json(),
+            //            Token::CDO => "<!--".to_json(),
+            //            Token::CDC => "-->".to_json(),
+            //
+            //            Token::Function(name) => Json::Array({
+            //                let mut v = vec!["function".to_json(), name.to_json()];
+            //                v.extend(nested(input));
+            //                v
+            //            }),
+            //            Token::ParenthesisBlock => Json::Array({
+            //                let mut v = vec!["()".to_json()];
+            //                v.extend(nested(input));
+            //                v
+            //            }),
+            //            Token::SquareBracketBlock => Json::Array({
+            //                let mut v = vec!["[]".to_json()];
+            //                v.extend(nested(input));
+            //                v
+            //            }),
+            //            Token::CurlyBracketBlock => Json::Array({
+            //                let mut v = vec!["{}".to_json()];
+            //                v.extend(nested(input));
+            //                v
+            //            }),
+            //            Token::BadUrl => Property {name: "id", value: v},
+            //            Token::BadString => Property {name: "id", value: v},
+            //            Token::CloseParenthesis => Property {name: "id", value: v},
+            //            Token::CloseSquareBracket => Property {name: "id", value: v},
+            //            Token::CloseCurlyBracket => Property {name: "id", value: v},
+            _ => "".to_string(),
+        }
+    }
+
+    impl AtRuleParser for StyleParser {
+        type Prelude = Vec<String>;
+        type AtRule = String;
+
+        fn parse_prelude(&self,
+                         name: &str,
+                         input: &mut Parser)
+                         -> Result<AtRuleType<Vec<String>, String>, ()> {
+            Ok(AtRuleType::OptionalBlock(component_values(input)))
+        }
+
+        fn parse_block(&self, mut prelude: Vec<String>, input: &mut Parser) -> Result<String, ()> {
+            prelude.push(component_values(input).into_iter().collect());
+            let s: String = prelude.into_iter().collect();
+            Ok(s)
+        }
+
+        fn rule_without_block(&self, mut prelude: Vec<String>) -> String {
+            prelude.push("".to_string());
+            "".to_string()
+        }
+    }
 
     let node = handle.borrow();
 
@@ -204,14 +359,16 @@ fn walk(prefix: &str, handle: Handle) {
                             s @ ("style", _) => {
                                 let (_, s) = s;
                                 println!("{:?}", s);
-                                //      let mut parser = Parser::new(&s);
-                                //    let property = DeclarationListParser::new(
-                                //    	&mut parser,
-                                //    	DeclarationParser)
-                                //    .map(|result| {
-                                // 	            result.unwrap()
-                                // 			}).collect();
-                                //    println!("{:?}", property);
+                                let mut parser = Parser::new(&s);
+                                let properties = DeclarationListParser::new(&mut parser,
+                                                                            StyleParser);
+                                let properties: Vec<String> = properties.map(|result| {
+                                                                            result.unwrap()
+                                                                        })
+                                                                        .collect();
+                                for property in properties {
+                                    println!("{:?}", property);
+                                }
                                 // 	while !parser.is_exhausted() {
                                 // 		// TODO parse property string into (key,value)
                                 // 				let property = parser.parse_until_before(
