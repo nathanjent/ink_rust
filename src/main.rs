@@ -34,7 +34,7 @@ type UiCell<'a> = conrod::UiCell<'a, Backend>;
 
 struct InkApp {
     dom: RcDom,
-    renderables: Vec<Rectangle>,
+    renderables: Vec<conrod::Rectangle>,
     elem_sender: mpsc::Sender<(usize, usize, bool)>,
     elem_receiver: mpsc::Receiver<(usize, usize, bool)>,
 }
@@ -94,9 +94,10 @@ fn main() {
     let mut app = InkApp::new();
     app.set_dom(dom);
 
+    let doc = app.get_doc_handle();
 
     // parse dom generating shapes for rendering
-    walk("", &app);
+    walk("", &mut app, doc);
 
     window.set_ups(60);
 
@@ -117,8 +118,8 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
         CANVAS,
         LINE,
         POINT_PATH,
-        RECTANGLE_FILL,
-        RECTANGLE_OUTLINE,
+        RECTANGLE_FILL with 64,
+        RECTANGLE_OUTLINE with 64,
         TRAPEZOID,
         OVAL_FILL,
         OVAL_OUTLINE,
@@ -128,41 +129,47 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
     // The background canvas upon which we'll place our widgets.
     Canvas::new().pad(80.0).set(CANVAS, ui);
 
-    Line::centred([-40.0, -40.0], [40.0, 40.0]).top_left_of(CANVAS).set(LINE, ui);
+    let ref r = app.renderables;
+    for renderable in r {
+        renderable.set(RECTANGLE_FILL, ui);
+    }
 
-    let left = [-40.0, -40.0];
-    let top = [0.0, 40.0];
-    let right = [40.0, -40.0];
-    let points = once(left).chain(once(top)).chain(once(right));
-    PointPath::centred(points).down(80.0).set(POINT_PATH, ui);
+    // Line::centred([-40.0, -40.0], [40.0, 40.0]).top_left_of(CANVAS).set(LINE, ui);
 
-    Rectangle::fill([80.0, 80.0]).down(80.0).set(RECTANGLE_FILL, ui);
+    // let left = [-40.0, -40.0];
+    // let top = [0.0, 40.0];
+    // let right = [40.0, -40.0];
+    // let points = once(left).chain(once(top)).chain(once(right));
+    // PointPath::centred(points).down(80.0).set(POINT_PATH, ui);
 
-    Rectangle::outline([80.0, 80.0]).down(80.0).set(RECTANGLE_OUTLINE, ui);
+    // Rectangle::fill([80.0, 80.0]).down(80.0).set(RECTANGLE_FILL, ui);
 
-    let bl = [-40.0, -40.0];
-    let tl = [-20.0, 40.0];
-    let tr = [20.0, 40.0];
-    let br = [40.0, -40.0];
-    let points = once(bl).chain(once(tl)).chain(once(tr)).chain(once(br));
-    Polygon::centred_fill(points).right_from(LINE, 80.0).set(TRAPEZOID, ui);
+    // Rectangle::outline([80.0, 80.0]).down(80.0).set(RECTANGLE_OUTLINE, ui);
 
-    Oval::fill([40.0, 80.0]).down(80.0).align_middle_x().set(OVAL_FILL, ui);
+    // let bl = [-40.0, -40.0];
+    // let tl = [-20.0, 40.0];
+    // let tr = [20.0, 40.0];
+    // let br = [40.0, -40.0];
+    // let points = once(bl).chain(once(tl)).chain(once(tr)).chain(once(br));
+    // Polygon::centred_fill(points).right_from(LINE, 80.0).set(TRAPEZOID, ui);
 
-    Oval::outline([80.0, 40.0]).down(100.0).align_middle_x().set(OVAL_OUTLINE, ui);
+    // Oval::fill([40.0, 80.0]).down(80.0).align_middle_x().set(OVAL_FILL, ui);
 
-    Circle::fill(40.0).down(100.0).align_middle_x().set(CIRCLE, ui);
+    // Oval::outline([80.0, 40.0]).down(100.0).align_middle_x().set(OVAL_OUTLINE, ui);
+
+    // Circle::fill(40.0).down(100.0).align_middle_x().set(CIRCLE, ui);
 }
 
 pub fn escape_default(s: &str) -> String {
     s.chars().flat_map(|c| c.escape_default()).collect()
 }
 
-fn walk(prefix: &str, &mut app: InkApp) {
-    use conrod::{Rectangle, Dimensions, Point, ShapeStyle, Positionable};
-    use conrod::color::Color;
+fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
+    use conrod::{Rectangle, Dimensions, Point, ShapeStyle, Positionable, Color};
+    // use graphics::Rectangle;
+    // use graphics::rectangle::{Shape, Border};
+    // use graphics::types::Scalar;
 
-    let doc = app.get_doc_handle();
     let node = doc.borrow();
 
     print!("{}", prefix);
@@ -176,88 +183,72 @@ fn walk(prefix: &str, &mut app: InkApp) {
             println!("{:?}", lname);
             match lname {
                 "rect" => {
-                    let mut dim: Dimensions = [0.0, 0.0];
-                    let mut pos: Point = [0.0, 0.0];
-                    let mut color: Color = Color::Rgba(1.0, 1.0, 1.0, 1.0);
+                    let mut id = "0";
+                    let mut pos = [0.0; 2];
+                    let mut round = [0.0; 2];
+                    let mut size = [1.0; 2];
+                    let mut fill_color = Color::Rgba(1.0,1.0,1.0,1.0);
+                    let mut line_color = [1.0; 4];
                     for attr in attrs {
                         let key_val = (attr.name.local.as_ref(), attr.value.as_ref());
                         match key_val {
-                            x @ ("x", _) => {
-                                let (_, x) = x;
-                                let x = x.parse::<f64>()
+                            v @ ("x", _) => {
+                                let (_, v) = v;
+                                let v = v.parse::<f64>()
                                          .expect("Parse error");
-                                pos[0] = x;
-                                println!("{:?}", x);
+                                pos[0] = v;
+                                println!("x: {:?}", v);
                             }
-                            y @ ("y", _) => {
-                                let (_, y) = y;
-                                let y = y.parse::<f64>()
+                            v @ ("y", _) => {
+                                let (_, v) = v;
+                                let v = v.parse::<f64>()
                                          .expect("Parse error");
-                                pos[1] = y;
-                                println!("{:?}", y);
+                                pos[1] = v;
+                                println!("y: {:?}", v);
                             }
-                            w @ ("width", _) => {
-                                let (_, w) = w;
-                                let w = w.parse::<f64>()
+                            v @ ("rx", _) => {
+                                let (_, v) = v;
+                                let v = v.parse::<f64>()
                                          .expect("Parse error");
-                                dim[0] = w;
-                                println!("{:?}", w);
+                                round[0] = v;
+                                println!("rx: {:?}", v);
                             }
-                            h @ ("height", _) => {
-                                let (_, h) = h;
-                                let h = h.parse::<f64>()
+                            v @ ("ry", _) => {
+                                let (_, v) = v;
+                                let v = v.parse::<f64>()
                                          .expect("Parse error");
-                                dim[1] = h;
-                                println!("{:?}", h);
+                                round[1] = v;
+                                println!("ry: {:?}", v);
                             }
-                            i @ ("id", _) => {
-                                let (_, i) = i;
-                                println!("{:?}", i);
+                            v @ ("width", _) => {
+                                let (_, v) = v;
+                                let v = v.parse::<f64>()
+                                         .expect("Parse error");
+                                size[0] = v;
+                                println!("width: {:?}", v);
                             }
-                            s @ ("style", _) => {
-                                let (_, s) = s;
-                                println!("{:?}", s);
-                                // let mut parser = Parser::new(&s);
-                                // 	while !parser.is_exhausted() {
-                                // 		// TODO parse property string into (key,value)
-                                // 				let property = parser.parse_until_before(
-                                // 					Delimiter::Semicolon | Delimiter::None,
-                                // 					|mut t| loop {
-                                // 						match t.next_including_whitespace_and_comments() {
-                                // 					Ok(Token::WhiteSpace(_)) |
-                                // 					Ok(Token::Colon) |
-                                // 					Ok(Token::Comment(_)) => {},
-                                // 			                r => return r
-                                // 						}
-                                // 			        }
-                                // 				).expect("Style parse error");
-                                // 				match property {
-                                // 					(Token::Ident(k), Token::Hash(v)) |
-                                // 						(Token::Ident(k), Token::IDHash(v)) => {
-                                // 								println!("{:?}:{:?}", k, v);
-                                // 								let color = CSSParserColor::parse(&mut Parser::new(&s))
-                                // 								.expect("Color parse error");
-                                // 							style.set_color(Color::Rgba(
-                                // 									color.red,
-                                // 									color.green,
-                                // 									color.blue,
-                                // 									color.alpha));
-                                // 					}
-                                // 					Token::AtKeyword(s) => println!("{:?} k", s),
-                                // 					Token::QuotedString(s) => println!("{:?} q", s),
-                                // 					Token::UnquotedUrl(s) => println!("{:?} u", s),
-                                // 					Token::Number(s) => println!("{:?} n", s),
-                                // 					Token::UnicodeRange(v, s) => println!("{:?}{:?} r", v, s),
-                                // 					Token::WhiteSpace(s) => println!("{:?} w", s),
-                                // 					Token::Dimension(v, s) => println!("{:?}{:?} d", v, s),
-                                // 					_ => { }
-                                // 				}
-                                // 	}
+                            v @ ("height", _) => {
+                                let (_, v) = v;
+                                let v = v.parse::<f64>()
+                                         .expect("Parse error");
+                                size[1] = v;
+                                println!("height: {:?}", v);
                             }
+                            v @ ("id", _) => {
+                                let (_, v) = v;
+                                id = v;
+                                println!("id: {:?}", id);
+                            }
+                            // v @ ("style", _) => {
+                            //     let (_, v) = v;
+                            //     s = v;
+                            //     println!("{:?}", s);
+                            // }
                             _ => {}
                         }
                     }
-                    let rect = Rectangle::styled(dim, ShapeStyle::fill_with(color)).left(pos[0]).down(pos[1]);
+                    let rect = Rectangle::fill_with(size, fill_color).xy(pos);
+                    app.renderables.push(rect);
                 }
                 _ => {}
             }
@@ -278,6 +269,6 @@ fn walk(prefix: &str, &mut app: InkApp) {
                          rcdom::Text(_) | Element(_, _) => true,
                          _ => false,
                      }) {
-        walk(&new_indent, &app);
+        walk(&new_indent, &mut app, child.clone());
     }
 }
