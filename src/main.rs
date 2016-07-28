@@ -20,7 +20,6 @@ use piston_window::*;
 
 use lyon::path_builder::*;
 
-
 use xml5ever::tendril::SliceExt;
 use xml5ever::parse;
 use xml5ever::tree_builder::TreeSink;
@@ -167,7 +166,7 @@ pub fn escape_default(s: &str) -> String {
 fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
     use conrod::{Rectangle, Dimensions, Point, ShapeStyle, Positionable, Color};
     // use graphics::Rectangle;
-    // use graphics::rectangle::{Shape, Border};
+    use graphics::rectangle::{Shape, Border};
     // use graphics::types::Scalar;
 
     let node = doc.borrow();
@@ -184,11 +183,13 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
             match lname {
                 "rect" => {
                     let mut id = "0";
-                    let mut pos = [0.0; 2];
-                    let mut round = [0.0; 2];
-                    let mut size = [1.0; 2];
-                    let mut fill_color = Color::Rgba(1.0,1.0,1.0,1.0);
-                    let mut line_color = [1.0; 4];
+                    let mut pos = [0.; 2];
+                    let mut round = [0.; 2];
+                    let mut size = [1.; 2];
+                    let mut fill_opacity = None;
+                    let mut fill_color = None;
+                    let mut stroke_color = None;
+                    let mut style = "";
                     for attr in attrs {
                         let key_val = (attr.name.local.as_ref(), attr.value.as_ref());
                         match key_val {
@@ -237,18 +238,56 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             v @ ("id", _) => {
                                 let (_, v) = v;
                                 id = v;
-                                println!("id: {:?}", id);
+                                println!("id: {:?}", v);
                             }
-                            // v @ ("style", _) => {
-                            //     let (_, v) = v;
-                            //     s = v;
-                            //     println!("{:?}", s);
-                            // }
+                            v @ ("style", _) => {
+                                let (_, v) = v;
+                                style = v;
+                                println!("{:?}", v);
+                            }
                             _ => {}
                         }
                     }
-                    let rect = Rectangle::fill_with(size, fill_color).xy(pos);
-                    app.renderables.push(rect);
+                    for (name, mut val) in style.split(';').map(|s| {
+                        let hash: Vec<&str> = s.split(':').collect();
+                        (hash[0], hash[1])
+                    }) {
+                        match name {
+                            "fill" => {
+                                if val.to_string().remove(0) == '#' {
+                                    let (_, hex_str) = val.split_at(1);
+                                    val = hex_str
+                                }
+                                fill_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
+                            },
+                            "stroke" => {
+                                if val.to_string().remove(0) == '#' {
+                                    let (_, hex_str) = val.split_at(1);
+                                    val = hex_str
+                                }
+                                stroke_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
+                            },
+                            "fill-opacity" => {
+                                fill_opacity = Some(val.parse::<f32>().expect("Error parsing opacity."))
+                            },
+                            _ => continue,
+                        }
+                        println!("{}:{};", name, val);
+                    }
+                    match fill_color {
+                        Some(c) => {
+                            let c = match fill_opacity {
+                                Some(o) => c.with_alpha(o),
+                                None => c,
+                            };
+                            app.renderables.push(Rectangle::fill_with(size, c).xy(pos))
+                        },
+                        None => {},
+                    }
+                    match stroke_color {
+                        Some(c) => app.renderables.push(Rectangle::outline_styled(size, conrod::LineStyle::new().color(c)).xy(pos)),
+                        None => {},
+                    }
                 }
                 _ => {}
             }
@@ -270,5 +309,51 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                          _ => false,
                      }) {
         walk(&new_indent, &mut app, child.clone());
+    }
+}
+
+fn parse_color_hash(value: &str) -> Result<conrod::Color, ()> {
+    let value = value.as_bytes();
+    match value.len() {
+        8 => rgba(
+            (try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
+            (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
+            (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32,
+            (try!(from_hex(value[6])) * 16 + try!(from_hex(value[7]))) as f32,
+        ),
+        6 => rgb(
+            (try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
+            (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
+            (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32,
+        ),
+        4 => rgba(
+            (try!(from_hex(value[0])) * 17) as f32,
+            (try!(from_hex(value[1])) * 17) as f32,
+            (try!(from_hex(value[2])) * 17) as f32,
+            (try!(from_hex(value[3])) * 17) as f32,
+        ),
+        3 => rgb(
+            (try!(from_hex(value[0])) * 17) as f32,
+            (try!(from_hex(value[1])) * 17) as f32,
+            (try!(from_hex(value[2])) * 17) as f32,
+        ),
+        _ => Err(())
+    }
+}
+
+fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Result<conrod::Color, ()> {
+    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., alpha / 255.,))
+}
+
+fn rgb(red: f32, green: f32, blue: f32) -> Result<conrod::Color, ()> {
+    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., 1.,))
+}
+
+fn from_hex(c: u8) -> Result<u8, ()> {
+    match c {
+        b'0' ... b'9' => Ok(c - b'0'),
+        b'a' ... b'f' => Ok(c - b'a' + 10),
+        b'A' ... b'F' => Ok(c - b'A' + 10),
+        _ => Err(())
     }
 }
