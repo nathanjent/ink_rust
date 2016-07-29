@@ -33,9 +33,19 @@ type UiCell<'a> = conrod::UiCell<'a, Backend>;
 
 struct InkApp {
     dom: RcDom,
-    renderables: Vec<conrod::Rectangle>,
+    renderables: Vec<RenderShape>,
     elem_sender: mpsc::Sender<(usize, usize, bool)>,
     elem_receiver: mpsc::Receiver<(usize, usize, bool)>,
+}
+
+enum RenderShape {
+    Rect_fill(String, conrod::Rectangle),
+    Rect_outline(String, conrod::Rectangle),
+    Oval_fill(String, conrod::Oval),
+    Oval_outline(String, conrod::Oval),
+    Line(String, conrod::Line),
+    Polyline(String, conrod::PointPath<f32>),
+    Polygon(String, conrod::Polygon<f32>),
 }
 
 impl InkApp {
@@ -110,27 +120,51 @@ fn main() {
 
 // Declare the `WidgetId`s and instantiate the widgets.
 fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
-    use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle};
+    use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle, Text};
     use std::iter::once;
 
     widget_ids!{
         CANVAS,
-        LINE,
-        POINT_PATH,
+        LINE with 64,
+        POINT_PATH with 64,
         RECTANGLE_FILL with 64,
         RECTANGLE_OUTLINE with 64,
         TRAPEZOID,
-        OVAL_FILL,
-        OVAL_OUTLINE,
+        POLYGON with 64,
+        OVAL_FILL with 64,
+        OVAL_OUTLINE with 64,
         CIRCLE,
+        TEXT with 64,
 	};
 
     // The background canvas upon which we'll place our widgets.
     Canvas::new().pad(80.0).set(CANVAS, ui);
 
-    let ref r = app.renderables;
-    for renderable in r {
-        renderable.set(RECTANGLE_FILL, ui);
+    let ref rs = app.renderables;
+    for renderable in rs.iter() {
+        match renderable {
+            &RenderShape::Rect_fill(ref id, r) => {
+                r.set(RECTANGLE_FILL, ui);
+            },
+            &RenderShape::Rect_outline(ref id, r) => {
+                r.set(RECTANGLE_OUTLINE, ui);
+            },
+            &RenderShape::Oval_fill(ref id, o) => {
+                o.set(OVAL_FILL, ui);
+            },
+            &RenderShape::Oval_outline(ref id, o) => {
+                o.set(OVAL_OUTLINE, ui);
+            },
+            &RenderShape::Line(ref id, l) => {
+                l.set(LINE, ui);
+            },
+            &RenderShape::Polyline(ref id, ref p) => {
+                // p.set(LINE, ui);
+            },
+            &RenderShape::Polygon(ref id, p) => {
+                // p.set(POLYGON, ui);
+            },
+        }
     }
 
     // Line::centred([-40.0, -40.0], [40.0, 40.0]).top_left_of(CANVAS).set(LINE, ui);
@@ -180,112 +214,175 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
         Element(ref name, ref attrs) => {
             let lname = name.local.as_ref();
             println!("{:?}", lname);
+
+            // attribute parsing
+            let mut id = None;
+            let mut style = "";
+            let mut pos = [0.; 2];
+            let mut size = [1.; 2];
+            let mut radius = 1.;
+            let mut radii = [0.; 2];
+            let mut pos1 = [0.; 2];
+            let mut pos2 = [0.; 2];
+            let mut points = Vec::new();
+
+            for attr in attrs {
+                let key_val = (attr.name.local.as_ref(), attr.value.as_ref());
+                match key_val {
+                    v @ ("id", _) => {
+                        let (_, v) = v;
+                        id = Some(v);
+                        println!("id: {:?}", v);
+                    }
+                    v @ ("style", _) => {
+                        let (_, v) = v;
+                        style = v;
+                        println!("{:?}", v);
+                    }
+                    v @ ("x", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos[0] = v;
+                        println!("x: {:?}", v);
+                    }
+                    v @ ("y", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos[1] = v;
+                        println!("y: {:?}", v);
+                    }
+                    v @ ("width", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        size[0] = v;
+                        println!("width: {:?}", v);
+                    }
+                    v @ ("height", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        size[1] = v;
+                        println!("height: {:?}", v);
+                    }
+                    v @ ("rx", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        radii[0] = v;
+                        println!("rx: {:?}", v);
+                    }
+                    v @ ("ry", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        radii[1] = v;
+                        println!("ry: {:?}", v);
+                    }
+                    v @ ("cx", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos[0] = v;
+                        println!("cx: {:?}", v);
+                    }
+                    v @ ("cy", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos[1] = v;
+                        println!("cy: {:?}", v);
+                    }
+                    v @ ("r", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        radius = v;
+                        println!("cy: {:?}", v);
+                    }
+                    v @ ("x1", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos1[0] = v;
+                        println!("x1: {:?}", v);
+                    }
+                    v @ ("y1", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos1[1] = v;
+                        println!("y1: {:?}", v);
+                    }
+                    v @ ("x2", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos2[0] = v;
+                        println!("x2: {:?}", v);
+                    }
+                    v @ ("y2", _) => {
+                        let (_, v) = v;
+                        let v = v.parse::<f64>()
+                                    .expect("Parse error");
+                        pos2[1] = v;
+                        println!("y2: {:?}", v);
+                    }
+                    v @ ("points", _) => {
+                        let (_, v) = v;
+                        points = v.split_whitespace()
+                            .map(|s| s.split_at(s.find(',').unwrap()))
+                            .map(|(x, y)| (x.parse::<f64>().expect("Parse error"), y.parse::<f64>().expect("Parse error")))
+                            .collect();
+                        println!("y2: {:?}", v);
+                    }
+                    _ => {}
+                }
+            }
+
+            // Style parsing
+            let mut fill_opacity = None;
+            let mut fill_color = None;
+            let mut stroke_color = None;
+            for (name, mut val) in style.split_terminator(';').map(|s| s.split_at(s.find(':').unwrap())) {
+                match name {
+                    "fill" => {
+                        if val.to_string().remove(0) == '#' {
+                            let (_, hex_str) = val.split_at(1);
+                            val = hex_str
+                        }
+                        fill_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
+                    },
+                    "stroke" => {
+                        if val.to_string().remove(0) == '#' {
+                            let (_, hex_str) = val.split_at(1);
+                            val = hex_str
+                        }
+                        stroke_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
+                    },
+                    "fill-opacity" => {
+                        fill_opacity = Some(val.parse::<f32>().expect("Error parsing opacity."))
+                    },
+                    _ => continue,
+                }
+                println!("{}:{};", name, val);
+            }
             match lname {
                 "rect" => {
-                    let mut id = "0";
-                    let mut pos = [0.; 2];
-                    let mut round = [0.; 2];
-                    let mut size = [1.; 2];
-                    let mut fill_opacity = None;
-                    let mut fill_color = None;
-                    let mut stroke_color = None;
-                    let mut style = "";
-                    for attr in attrs {
-                        let key_val = (attr.name.local.as_ref(), attr.value.as_ref());
-                        match key_val {
-                            v @ ("x", _) => {
-                                let (_, v) = v;
-                                let v = v.parse::<f64>()
-                                         .expect("Parse error");
-                                pos[0] = v;
-                                println!("x: {:?}", v);
-                            }
-                            v @ ("y", _) => {
-                                let (_, v) = v;
-                                let v = v.parse::<f64>()
-                                         .expect("Parse error");
-                                pos[1] = v;
-                                println!("y: {:?}", v);
-                            }
-                            v @ ("rx", _) => {
-                                let (_, v) = v;
-                                let v = v.parse::<f64>()
-                                         .expect("Parse error");
-                                round[0] = v;
-                                println!("rx: {:?}", v);
-                            }
-                            v @ ("ry", _) => {
-                                let (_, v) = v;
-                                let v = v.parse::<f64>()
-                                         .expect("Parse error");
-                                round[1] = v;
-                                println!("ry: {:?}", v);
-                            }
-                            v @ ("width", _) => {
-                                let (_, v) = v;
-                                let v = v.parse::<f64>()
-                                         .expect("Parse error");
-                                size[0] = v;
-                                println!("width: {:?}", v);
-                            }
-                            v @ ("height", _) => {
-                                let (_, v) = v;
-                                let v = v.parse::<f64>()
-                                         .expect("Parse error");
-                                size[1] = v;
-                                println!("height: {:?}", v);
-                            }
-                            v @ ("id", _) => {
-                                let (_, v) = v;
-                                id = v;
-                                println!("id: {:?}", v);
-                            }
-                            v @ ("style", _) => {
-                                let (_, v) = v;
-                                style = v;
-                                println!("{:?}", v);
-                            }
-                            _ => {}
-                        }
-                    }
-                    for (name, mut val) in style.split(';').map(|s| {
-                        let hash: Vec<&str> = s.split(':').collect();
-                        (hash[0], hash[1])
-                    }) {
-                        match name {
-                            "fill" => {
-                                if val.to_string().remove(0) == '#' {
-                                    let (_, hex_str) = val.split_at(1);
-                                    val = hex_str
-                                }
-                                fill_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
-                            },
-                            "stroke" => {
-                                if val.to_string().remove(0) == '#' {
-                                    let (_, hex_str) = val.split_at(1);
-                                    val = hex_str
-                                }
-                                stroke_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
-                            },
-                            "fill-opacity" => {
-                                fill_opacity = Some(val.parse::<f32>().expect("Error parsing opacity."))
-                            },
-                            _ => continue,
-                        }
-                        println!("{}:{};", name, val);
-                    }
                     match fill_color {
                         Some(c) => {
                             let c = match fill_opacity {
                                 Some(o) => c.with_alpha(o),
                                 None => c,
                             };
-                            app.renderables.push(Rectangle::fill_with(size, c).xy(pos))
+                            app.renderables.push(RenderShape::Rect_fill(id.unwrap().to_string(), Rectangle::fill_with(size, c).xy(pos)))
                         },
                         None => {},
                     }
                     match stroke_color {
-                        Some(c) => app.renderables.push(Rectangle::outline_styled(size, conrod::LineStyle::new().color(c)).xy(pos)),
+                        Some(c) => app.renderables.push(RenderShape::Rect_outline(id.unwrap().to_string(), Rectangle::outline_styled(size, conrod::LineStyle::new().color(c)).xy(pos))),
                         None => {},
                     }
                 }
