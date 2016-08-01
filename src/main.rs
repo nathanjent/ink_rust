@@ -69,7 +69,7 @@ impl InkApp {
 }
 
 fn main() {
-    let mut file = File::open("tests/documents/testrect.svg").unwrap();
+    let mut file = File::open("tests/documents/testrect.svg").expect("File read error.");
 
     let mut file_string = String::new();
     if let Err(err) = file.read_to_string(&mut file_string) {
@@ -333,7 +333,7 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                     v @ ("points", _) => {
                         let (_, v) = v;
                         points = v.split_whitespace()
-                            .map(|s| s.split_at(s.find(',').unwrap()))
+                            .map(|s| s.split_at(s.find(',').expect("Find point separator error.")))
                             .map(|(x, y)| {
                                 (x.parse::<f64>().expect("Parse error"),
                                  y.parse::<f64>().expect("Parse error"))
@@ -356,7 +356,7 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
             let mut stroke_miterlimit = None;
             let mut stroke_dasharray = DashArray::None;
             for (name, mut val) in style.split_terminator(';')
-                .map(|s| s.split_at(s.find(':').unwrap())) {
+                .map(|s| s.split_at(s.find(':').expect("Find point separator error."))) {
                 let (_, mut val) = val.split_at(1);
                 match name {
                     "fill" => {
@@ -364,7 +364,7 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             let (_, hex_str) = val.split_at(1);
                             val = hex_str
                         }
-                        println!("fill:{:?}", val);
+                        println!("fill:#{:?}", val);
                         fill_color = Some(parse_color_hash(val).expect("Error parsing CSS color"));
                     }
                     "fill-opacity" => {
@@ -412,53 +412,10 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             "none" => DashArray::None,
                             "inherit" => DashArray::Inherit,
                             _ => {
-                                let mut dasharray = Vec::new();
-                                let mut temp_str: String = String::new();
-                                let mut prev_state_number = true;
-                                for character in val.chars() {
-                                    if prev_state_number {
-                                        if character.is_digit(10) {
-                                            temp_str.push(character);
-                                            prev_state_number = true;
-                                        }
-                                        if character == '.' {
-                                            temp_str.push(character);
-                                            prev_state_number = true;
-                                        }
-                                        if character.is_whitespace() {
-                                            prev_state_number = false;
-                                        }
-                                        if character == ',' {
-                                            prev_state_number = false;
-                                        }
-                                    } else {
-                                        if character.is_digit(10) {
-                                            if !temp_str.is_empty() {
-                                                dasharray.push(
-                                                    temp_str.parse::<f64>().unwrap());
-                                                temp_str.clear();
-                                            }
-                                            temp_str.push(character);
-                                            prev_state_number = true;
-                                        }
-                                        if character == '.' {
-                                            if !temp_str.is_empty() {
-                                                dasharray.push(
-                                                    temp_str.parse::<f64>().unwrap());
-                                                temp_str.clear();
-                                            }
-                                            temp_str.push(character);
-                                            prev_state_number = true;
-                                        }
-                                        if character.is_whitespace() {
-                                            prev_state_number = false;
-                                        }
-                                        if character == ',' {
-                                            prev_state_number = false;
-                                        }
-                                    }
-                                }
-                                DashArray::DashArray(dasharray)
+                                let values = val.split(|c: char| (c.is_whitespace() && c == ','))
+                                    .map(|s| s.parse::<f64>().expect("Dash Array parsing error."))
+                                    .collect::<Vec<_>>();
+                                DashArray::DashArray(values)
                             },
                         }
                     }
@@ -474,7 +431,7 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                                 Some(o) => c.with_alpha(o as f32),
                                 None => c,
                             };
-                            app.renderables.push(RenderShape::Rect_fill(id.unwrap().to_string(),
+                            app.renderables.push(RenderShape::Rect_fill(id.unwrap_or_default().to_string(),
                                                                         Rectangle::fill_with(size,
                                                                                              c)
                                                                             .xy(pos)))
@@ -483,10 +440,10 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                     }
                     match stroke_color {
                         Some(c) => app.renderables.push(
-                            RenderShape::Rect_outline(id.unwrap().to_string(), 
+                            RenderShape::Rect_outline(id.unwrap_or_default().to_string(), 
                             Rectangle::outline_styled(size, conrod::LineStyle::new()
                                                       .color(c)
-                                                      .thickness(stroke_width.unwrap())
+                                                      .thickness(stroke_width.unwrap_or_default())
                                                       ).xy(pos))),
                         None => {}
                     }
@@ -498,16 +455,16 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                                 Some(o) => c.with_alpha(o as f32),
                                 None => c,
                             };
-                            app.renderables.push(RenderShape::Oval_fill(id.unwrap().to_string(),
-                                                                        Oval::fill_with(size, c)
+                            app.renderables.push(RenderShape::Oval_fill(id.unwrap_or_default().to_string(),
+                                                                        Oval::fill_with(radii, c)
                                                                             .xy(pos)))
                         }
                         None => {}
                     }
                     match stroke_color {
                         Some(c) => app.renderables.push(
-                            RenderShape::Oval_outline(id.unwrap().to_string(), 
-                            Oval::outline_styled(size, conrod::LineStyle::new().color(c)).xy(pos))),
+                            RenderShape::Oval_outline(id.unwrap_or_default().to_string(), 
+                            Oval::outline_styled(radii, conrod::LineStyle::new().color(c)).xy(pos))),
                         None => {}
                     }
                 }
