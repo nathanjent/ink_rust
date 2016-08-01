@@ -55,6 +55,7 @@
      style="fill:#A7CCD8;fill-opacity:0.8;stroke:#0917df;stroke-opacity:1"
      width="100" />
      <!--
+     -->
   <ellipse
      style="fill:#4ad852;fill-opacity:1;stroke:#1723d1;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="path4135"
@@ -68,5 +69,4 @@
      cx="131.25"
      cy="228.4375"
      r="35.9375" />
-     -->
 </svg>

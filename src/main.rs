@@ -83,17 +83,17 @@ fn main() {
 
     // Construct the window.
     let mut window: PistonWindow = WindowSettings::new("Inkrust", [720, 360])
-                                       .opengl(piston_window::OpenGL::V3_2)
-                                       .samples(4)
-                                       .exit_on_esc(true)
-                                       .build()
-                                       .unwrap();
+        .opengl(piston_window::OpenGL::V3_2)
+        .samples(4)
+        .exit_on_esc(true)
+        .build()
+        .unwrap();
 
     // Construct our `Ui`.
     let mut ui = {
         let assets = find_folder::Search::KidsThenParents(3, 5)
-                         .for_folder("assets")
-                         .unwrap();
+            .for_folder("assets")
+            .unwrap();
         let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
         let theme = Theme::default();
         let glyph_cache = piston_window::Glyphs::new(&font_path, window.factory.clone()).unwrap();
@@ -145,25 +145,25 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
         match renderable {
             &RenderShape::Rect_fill(ref id, r) => {
                 r.set(RECTANGLE_FILL, ui);
-            },
+            }
             &RenderShape::Rect_outline(ref id, r) => {
                 r.set(RECTANGLE_OUTLINE, ui);
-            },
+            }
             &RenderShape::Oval_fill(ref id, o) => {
                 o.set(OVAL_FILL, ui);
-            },
+            }
             &RenderShape::Oval_outline(ref id, o) => {
                 o.set(OVAL_OUTLINE, ui);
-            },
+            }
             &RenderShape::Line(ref id, l) => {
                 l.set(LINE, ui);
-            },
+            }
             &RenderShape::Polyline(ref id, ref p) => {
                 // p.set(LINE, ui);
-            },
+            }
             &RenderShape::Polygon(ref id, p) => {
                 // p.set(POLYGON, ui);
-            },
+            }
         }
     }
 
@@ -198,7 +198,7 @@ pub fn escape_default(s: &str) -> String {
 }
 
 fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
-    use conrod::{Rectangle, Dimensions, Point, ShapeStyle, Positionable, Color};
+    use conrod::{Rectangle, Oval, Circle, Dimensions, Point, ShapeStyle, Positionable, Color};
     // use graphics::Rectangle;
     use graphics::rectangle::{Shape, Border};
     // use graphics::types::Scalar;
@@ -242,91 +242,91 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                     v @ ("x", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos[0] = v;
                         println!("x: {:?}", v);
                     }
                     v @ ("y", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos[1] = v;
                         println!("y: {:?}", v);
                     }
                     v @ ("width", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         size[0] = v;
                         println!("width: {:?}", v);
                     }
                     v @ ("height", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         size[1] = v;
                         println!("height: {:?}", v);
                     }
                     v @ ("rx", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         radii[0] = v;
                         println!("rx: {:?}", v);
                     }
                     v @ ("ry", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         radii[1] = v;
                         println!("ry: {:?}", v);
                     }
                     v @ ("cx", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos[0] = v;
                         println!("cx: {:?}", v);
                     }
                     v @ ("cy", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos[1] = v;
                         println!("cy: {:?}", v);
                     }
                     v @ ("r", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         radius = v;
                         println!("cy: {:?}", v);
                     }
                     v @ ("x1", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos1[0] = v;
                         println!("x1: {:?}", v);
                     }
                     v @ ("y1", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos1[1] = v;
                         println!("y1: {:?}", v);
                     }
                     v @ ("x2", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos2[0] = v;
                         println!("x2: {:?}", v);
                     }
                     v @ ("y2", _) => {
                         let (_, v) = v;
                         let v = v.parse::<f64>()
-                                    .expect("Parse error");
+                            .expect("Parse error");
                         pos2[1] = v;
                         println!("y2: {:?}", v);
                     }
@@ -334,7 +334,10 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                         let (_, v) = v;
                         points = v.split_whitespace()
                             .map(|s| s.split_at(s.find(',').unwrap()))
-                            .map(|(x, y)| (x.parse::<f64>().expect("Parse error"), y.parse::<f64>().expect("Parse error")))
+                            .map(|(x, y)| {
+                                (x.parse::<f64>().expect("Parse error"),
+                                 y.parse::<f64>().expect("Parse error"))
+                            })
                             .collect();
                         println!("y2: {:?}", v);
                     }
@@ -343,28 +346,122 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
             }
 
             // Style parsing
-            let mut fill_opacity = None;
             let mut fill_color = None;
+            let mut fill_opacity = None;
             let mut stroke_color = None;
-            for (name, mut val) in style.split_terminator(';').map(|s| s.split_at(s.find(':').unwrap())) {
+            let mut stroke_opacity = None;
+            let mut stroke_width = None;
+            let mut stroke_linecap = LineCap::Butt;
+            let mut stroke_linejoin = LineJoin::Miter;
+            let mut stroke_miterlimit = None;
+            let mut stroke_dasharray = DashArray::None;
+            for (name, mut val) in style.split_terminator(';')
+                .map(|s| s.split_at(s.find(':').unwrap())) {
+                let (_, mut val) = val.split_at(1);
                 match name {
                     "fill" => {
                         if val.to_string().remove(0) == '#' {
                             let (_, hex_str) = val.split_at(1);
                             val = hex_str
                         }
-                        fill_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
-                    },
+                        println!("fill:{:?}", val);
+                        fill_color = Some(parse_color_hash(val).expect("Error parsing CSS color"));
+                    }
+                    "fill-opacity" => {
+                        fill_opacity = Some(val.parse::<f64>().expect("Error parsing opacity."))
+                    }
                     "stroke" => {
                         if val.to_string().remove(0) == '#' {
                             let (_, hex_str) = val.split_at(1);
                             val = hex_str
                         }
-                        stroke_color  = Some(parse_color_hash(val).expect("Error parsing CSS color"));
-                    },
-                    "fill-opacity" => {
-                        fill_opacity = Some(val.parse::<f32>().expect("Error parsing opacity."))
-                    },
+                        stroke_color = Some(parse_color_hash(val)
+                            .expect("Error parsing CSS color"));
+                    }
+                    "stroke-opacity" => {
+                        stroke_opacity = Some(val.parse::<f64>().expect("Error parsing opacity."))
+                    }
+                    "stroke-width" => {
+                        stroke_width = Some(val.parse::<f64>()
+                            .expect("Error parsing stroke width."))
+                    }
+                    "stroke-linecap" => {
+                        stroke_linecap = match val {
+                            "butt" => LineCap::Butt,
+                            "round" => LineCap::Round,
+                            "square" => LineCap::Square,
+                            "inherit" => LineCap::Inherit,
+                            _ => LineCap::Inherit,
+                        }
+                    }
+                    "stroke-linejoin" => {
+                        stroke_linejoin = match val {
+                            "miter" => LineJoin::Miter,
+                            "round" => LineJoin::Round,
+                            "bevel" => LineJoin::Bevel,
+                            "inherit" => LineJoin::Inherit,
+                            _ => LineJoin::Inherit,
+                        }
+                    }
+                    "stroke-miterlimit" => {
+                        stroke_miterlimit = Some(val.parse::<f64>()
+                            .expect("Error parsing stroke miterlimit."))
+                    }
+                    "stroke-dasharray" => {
+                        stroke_dasharray = match val {
+                            "none" => DashArray::None,
+                            "inherit" => DashArray::Inherit,
+                            _ => {
+                                let mut dasharray = Vec::new();
+                                let mut temp_str: String = String::new();
+                                let mut prev_state_number = true;
+                                for character in val.chars() {
+                                    if prev_state_number {
+                                        if character.is_digit(10) {
+                                            temp_str.push(character);
+                                            prev_state_number = true;
+                                        }
+                                        if character == '.' {
+                                            temp_str.push(character);
+                                            prev_state_number = true;
+                                        }
+                                        if character.is_whitespace() {
+                                            prev_state_number = false;
+                                        }
+                                        if character == ',' {
+                                            prev_state_number = false;
+                                        }
+                                    } else {
+                                        if character.is_digit(10) {
+                                            if !temp_str.is_empty() {
+                                                dasharray.push(
+                                                    temp_str.parse::<f64>().unwrap());
+                                                temp_str.clear();
+                                            }
+                                            temp_str.push(character);
+                                            prev_state_number = true;
+                                        }
+                                        if character == '.' {
+                                            if !temp_str.is_empty() {
+                                                dasharray.push(
+                                                    temp_str.parse::<f64>().unwrap());
+                                                temp_str.clear();
+                                            }
+                                            temp_str.push(character);
+                                            prev_state_number = true;
+                                        }
+                                        if character.is_whitespace() {
+                                            prev_state_number = false;
+                                        }
+                                        if character == ',' {
+                                            prev_state_number = false;
+                                        }
+                                    }
+                                }
+                                DashArray::DashArray(dasharray)
+                            },
+                        }
+                    }
                     _ => continue,
                 }
                 println!("{}:{};", name, val);
@@ -374,16 +471,44 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                     match fill_color {
                         Some(c) => {
                             let c = match fill_opacity {
-                                Some(o) => c.with_alpha(o),
+                                Some(o) => c.with_alpha(o as f32),
                                 None => c,
                             };
-                            app.renderables.push(RenderShape::Rect_fill(id.unwrap().to_string(), Rectangle::fill_with(size, c).xy(pos)))
-                        },
-                        None => {},
+                            app.renderables.push(RenderShape::Rect_fill(id.unwrap().to_string(),
+                                                                        Rectangle::fill_with(size,
+                                                                                             c)
+                                                                            .xy(pos)))
+                        }
+                        None => {}
                     }
                     match stroke_color {
-                        Some(c) => app.renderables.push(RenderShape::Rect_outline(id.unwrap().to_string(), Rectangle::outline_styled(size, conrod::LineStyle::new().color(c)).xy(pos))),
-                        None => {},
+                        Some(c) => app.renderables.push(
+                            RenderShape::Rect_outline(id.unwrap().to_string(), 
+                            Rectangle::outline_styled(size, conrod::LineStyle::new()
+                                                      .color(c)
+                                                      .thickness(stroke_width.unwrap())
+                                                      ).xy(pos))),
+                        None => {}
+                    }
+                }
+                "ellipse" => {
+                    match fill_color {
+                        Some(c) => {
+                            let c = match fill_opacity {
+                                Some(o) => c.with_alpha(o as f32),
+                                None => c,
+                            };
+                            app.renderables.push(RenderShape::Oval_fill(id.unwrap().to_string(),
+                                                                        Oval::fill_with(size, c)
+                                                                            .xy(pos)))
+                        }
+                        None => {}
+                    }
+                    match stroke_color {
+                        Some(c) => app.renderables.push(
+                            RenderShape::Oval_outline(id.unwrap().to_string(), 
+                            Oval::outline_styled(size, conrod::LineStyle::new().color(c)).xy(pos))),
+                        None => {}
                     }
                 }
                 _ => {}
@@ -400,57 +525,77 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
     };
 
     for child in node.children
-                     .iter()
-                     .filter(|child| match child.borrow().node {
-                         rcdom::Text(_) | Element(_, _) => true,
-                         _ => false,
-                     }) {
+        .iter()
+        .filter(|child| match child.borrow().node {
+            rcdom::Text(_) | Element(_, _) => true,
+            _ => false,
+        }) {
         walk(&new_indent, &mut app, child.clone());
     }
+}
+
+enum LineCap {
+    Butt,
+    Round,
+    Square,
+    Inherit,
+}
+
+enum LineJoin {
+    Miter,
+    Round,
+    Bevel,
+    Inherit,
+}
+
+enum DashArray {
+    DashArray(Vec<f64>),
+    None,
+    Inherit,
 }
 
 fn parse_color_hash(value: &str) -> Result<conrod::Color, ()> {
     let value = value.as_bytes();
     match value.len() {
-        8 => rgba(
-            (try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
-            (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
-            (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32,
-            (try!(from_hex(value[6])) * 16 + try!(from_hex(value[7]))) as f32,
-        ),
-        6 => rgb(
-            (try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
-            (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
-            (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32,
-        ),
-        4 => rgba(
-            (try!(from_hex(value[0])) * 17) as f32,
-            (try!(from_hex(value[1])) * 17) as f32,
-            (try!(from_hex(value[2])) * 17) as f32,
-            (try!(from_hex(value[3])) * 17) as f32,
-        ),
-        3 => rgb(
-            (try!(from_hex(value[0])) * 17) as f32,
-            (try!(from_hex(value[1])) * 17) as f32,
-            (try!(from_hex(value[2])) * 17) as f32,
-        ),
-        _ => Err(())
+        8 => {
+            rgba((try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
+                 (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
+                 (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32,
+                 (try!(from_hex(value[6])) * 16 + try!(from_hex(value[7]))) as f32)
+        }
+        6 => {
+            rgb((try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
+                (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
+                (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32)
+        }
+        4 => {
+            rgba((try!(from_hex(value[0])) * 17) as f32,
+                 (try!(from_hex(value[1])) * 17) as f32,
+                 (try!(from_hex(value[2])) * 17) as f32,
+                 (try!(from_hex(value[3])) * 17) as f32)
+        }
+        3 => {
+            rgb((try!(from_hex(value[0])) * 17) as f32,
+                (try!(from_hex(value[1])) * 17) as f32,
+                (try!(from_hex(value[2])) * 17) as f32)
+        }
+        _ => Err(()),
     }
 }
 
 fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Result<conrod::Color, ()> {
-    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., alpha / 255.,))
+    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., alpha / 255.))
 }
 
 fn rgb(red: f32, green: f32, blue: f32) -> Result<conrod::Color, ()> {
-    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., 1.,))
+    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., 1.))
 }
 
 fn from_hex(c: u8) -> Result<u8, ()> {
     match c {
-        b'0' ... b'9' => Ok(c - b'0'),
-        b'a' ... b'f' => Ok(c - b'a' + 10),
-        b'A' ... b'F' => Ok(c - b'A' + 10),
-        _ => Err(())
+        b'0'...b'9' => Ok(c - b'0'),
+        b'a'...b'f' => Ok(c - b'a' + 10),
+        b'A'...b'F' => Ok(c - b'A' + 10),
+        _ => Err(()),
     }
 }
