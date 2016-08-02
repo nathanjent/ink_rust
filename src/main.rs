@@ -217,10 +217,9 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
 
             // attribute parsing
             let mut id = None;
-            let mut style = "";
+            let mut style = Some("");
             let mut pos = [0.; 2];
             let mut size = [1.; 2];
-            let mut radius = 1.;
             let mut radii = [0.; 2];
             let mut pos1 = [0.; 2];
             let mut pos2 = [0.; 2];
@@ -236,110 +235,81 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                     }
                     v @ ("style", _) => {
                         let (_, v) = v;
-                        style = v;
+                        style = Some(v);
                         println!("{:?}", v);
                     }
                     v @ ("x", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos[0] = v;
+                        pos[0] = v.parse::<f64>().unwrap_or(0.);
                         println!("x: {:?}", v);
                     }
                     v @ ("y", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos[1] = v;
+                        pos[1] = v.parse::<f64>().unwrap_or(0.);
                         println!("y: {:?}", v);
                     }
                     v @ ("width", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        size[0] = v;
+                        size[0] = v.parse::<f64>().unwrap_or(1.);
                         println!("width: {:?}", v);
                     }
                     v @ ("height", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        size[1] = v;
+                        size[1] = v.parse::<f64>().unwrap_or(1.);
                         println!("height: {:?}", v);
                     }
                     v @ ("rx", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        radii[0] = v;
+                        radii[0] = v.parse::<f64>().unwrap_or(1.);
                         println!("rx: {:?}", v);
                     }
                     v @ ("ry", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        radii[1] = v;
+                        radii[1] = v.parse::<f64>().unwrap_or(1.);
                         println!("ry: {:?}", v);
                     }
                     v @ ("cx", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos[0] = v;
+                        pos[0] = v.parse::<f64>().unwrap_or(0.);
                         println!("cx: {:?}", v);
                     }
                     v @ ("cy", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos[1] = v;
+                        pos[1] = v.parse::<f64>().unwrap_or(0.);
                         println!("cy: {:?}", v);
                     }
                     v @ ("r", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        radius = v;
+                        radii = [v.parse::<f64>().unwrap_or(1.); 2];
                         println!("cy: {:?}", v);
                     }
                     v @ ("x1", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos1[0] = v;
+                        pos1[0] = v.parse::<f64>().unwrap_or(0.);
                         println!("x1: {:?}", v);
                     }
                     v @ ("y1", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos1[1] = v;
+                        pos1[1] = v.parse::<f64>().unwrap_or(0.);
                         println!("y1: {:?}", v);
                     }
                     v @ ("x2", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos2[0] = v;
+                        pos2[0] = v.parse::<f64>().unwrap_or(0.);
                         println!("x2: {:?}", v);
                     }
                     v @ ("y2", _) => {
                         let (_, v) = v;
-                        let v = v.parse::<f64>()
-                            .expect("Parse error");
-                        pos2[1] = v;
+                        pos2[1] = v.parse::<f64>().unwrap_or(0.);
                         println!("y2: {:?}", v);
                     }
                     v @ ("points", _) => {
                         let (_, v) = v;
                         points = v.split_whitespace()
-                            .map(|s| s.split_at(s.find(',').expect("Find point separator error.")))
-                            .map(|(x, y)| {
-                                (x.parse::<f64>().expect("Parse error"),
-                                 y.parse::<f64>().expect("Parse error"))
-                            })
+                            .map(|s| s.split_at(s.find(',').expect("Point separator error.")))
+                            .map(|(x, y)| { (x.parse::<f64>().ok(), y.parse::<f64>().ok()) })
                             .collect();
-                        println!("y2: {:?}", v);
+                        println!("points: {:?}", v);
                     }
                     _ => {}
                 }
@@ -355,35 +325,32 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
             let mut stroke_linejoin = LineJoin::Miter;
             let mut stroke_miterlimit = None;
             let mut stroke_dasharray = DashArray::None;
-            for (name, mut val) in style.split_terminator(';')
+            for (name, mut val) in style.unwrap_or("").split_terminator(';')
                 .map(|s| s.split_at(s.find(':').expect("Find point separator error."))) {
                 let (_, mut val) = val.split_at(1);
                 match name {
                     "fill" => {
-                        if val.to_string().remove(0) == '#' {
+                        if val.starts_with('#') {
                             let (_, hex_str) = val.split_at(1);
-                            val = hex_str
+                            fill_color = parse_color_hash(hex_str).ok();
                         }
                         println!("fill:#{:?}", val);
-                        fill_color = Some(parse_color_hash(val).expect("Error parsing CSS color"));
                     }
                     "fill-opacity" => {
-                        fill_opacity = Some(val.parse::<f64>().expect("Error parsing opacity."))
+                        fill_opacity = val.parse::<f64>().ok();
                     }
                     "stroke" => {
-                        if val.to_string().remove(0) == '#' {
+                        if val.starts_with('#') {
                             let (_, hex_str) = val.split_at(1);
-                            val = hex_str
+                            stroke_color = parse_color_hash(hex_str).ok();
                         }
-                        stroke_color = Some(parse_color_hash(val)
-                            .expect("Error parsing CSS color"));
+                        println!("stroke:#{:?}", val);
                     }
                     "stroke-opacity" => {
-                        stroke_opacity = Some(val.parse::<f64>().expect("Error parsing opacity."))
+                        stroke_opacity = val.parse::<f64>().ok();
                     }
                     "stroke-width" => {
-                        stroke_width = Some(val.parse::<f64>()
-                            .expect("Error parsing stroke width."))
+                        stroke_width = val.parse::<f64>().ok();
                     }
                     "stroke-linecap" => {
                         stroke_linecap = match val {
@@ -392,7 +359,7 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             "square" => LineCap::Square,
                             "inherit" => LineCap::Inherit,
                             _ => LineCap::Inherit,
-                        }
+                        };
                     }
                     "stroke-linejoin" => {
                         stroke_linejoin = match val {
@@ -401,74 +368,88 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             "bevel" => LineJoin::Bevel,
                             "inherit" => LineJoin::Inherit,
                             _ => LineJoin::Inherit,
-                        }
+                        };
                     }
                     "stroke-miterlimit" => {
-                        stroke_miterlimit = Some(val.parse::<f64>()
-                            .expect("Error parsing stroke miterlimit."))
+                        stroke_miterlimit = val.parse::<f64>().ok();
                     }
                     "stroke-dasharray" => {
                         stroke_dasharray = match val {
                             "none" => DashArray::None,
                             "inherit" => DashArray::Inherit,
                             _ => {
-                                let values = val.split(|c: char| (c.is_whitespace() && c == ','))
-                                    .map(|s| s.parse::<f64>().expect("Dash Array parsing error."))
+                                let values = val
+                                    .split(|c: char| (c.is_whitespace() && c == ','))
+                                    .filter_map(|s| s.parse::<f64>().ok())
                                     .collect::<Vec<_>>();
                                 DashArray::DashArray(values)
-                            },
-                        }
+                            }
+                        };
                     }
                     _ => continue,
                 }
                 println!("{}:{};", name, val);
             }
+            let mut shape_fill = None;
+            let mut shape_stroke = None;
             match lname {
                 "rect" => {
-                    match fill_color {
-                        Some(c) => {
-                            let c = match fill_opacity {
-                                Some(o) => c.with_alpha(o as f32),
-                                None => c,
-                            };
-                            app.renderables.push(RenderShape::Rect_fill(id.unwrap_or_default().to_string(),
-                                                                        Rectangle::fill_with(size,
-                                                                                             c)
-                                                                            .xy(pos)))
-                        }
-                        None => {}
-                    }
-                    match stroke_color {
-                        Some(c) => app.renderables.push(
-                            RenderShape::Rect_outline(id.unwrap_or_default().to_string(), 
-                            Rectangle::outline_styled(size, conrod::LineStyle::new()
-                                                      .color(c)
-                                                      .thickness(stroke_width.unwrap_or_default())
-                                                      ).xy(pos))),
-                        None => {}
-                    }
-                }
+                    shape_fill = Some(RenderShape::Rect_fill(
+                        id.unwrap_or_default().to_string(), 
+                        Rectangle::fill_with(
+                            size, 
+                            fill_color.unwrap_or(conrod::color::BLACK))
+                        .xy(pos)));
+                    shape_stroke = Some(RenderShape::Rect_outline(
+                        id.unwrap_or_default().to_string(), 
+                        Rectangle::outline_styled(
+                            size, 
+                            conrod::LineStyle::new()
+                            .color(stroke_color.unwrap_or(conrod::color::BLACK))
+                            .thickness(stroke_width.unwrap_or_default()))
+                        .xy(pos)));
+                },
                 "ellipse" => {
-                    match fill_color {
-                        Some(c) => {
-                            let c = match fill_opacity {
-                                Some(o) => c.with_alpha(o as f32),
-                                None => c,
-                            };
-                            app.renderables.push(RenderShape::Oval_fill(id.unwrap_or_default().to_string(),
-                                                                        Oval::fill_with(radii, c)
-                                                                            .xy(pos)))
-                        }
-                        None => {}
-                    }
-                    match stroke_color {
-                        Some(c) => app.renderables.push(
-                            RenderShape::Oval_outline(id.unwrap_or_default().to_string(), 
-                            Oval::outline_styled(radii, conrod::LineStyle::new().color(c)).xy(pos))),
-                        None => {}
-                    }
-                }
-                _ => {}
+                    shape_fill = Some(RenderShape::Oval_fill(
+                        id.unwrap_or_default().to_string(), 
+                        Oval::fill_with(
+                            radii,
+                            fill_color.unwrap_or(conrod::color::BLACK))
+                        .xy(pos)));
+                    shape_stroke = Some(RenderShape::Oval_outline(
+                        id.unwrap_or_default().to_string(), 
+                        Oval::outline_styled( 
+                            radii, 
+                            conrod::LineStyle::new()
+                            .color(stroke_color.unwrap_or(conrod::color::BLACK))
+                            .thickness(stroke_width.unwrap_or_default()))
+                        .xy(pos)));
+                },
+                "circle" => {
+                    shape_fill = Some(RenderShape::Oval_fill(
+                        id.unwrap_or_default().to_string(), 
+                        Oval::fill_with(
+                            radii,
+                            fill_color.unwrap_or(conrod::color::BLACK))
+                        .xy(pos)));
+                    shape_stroke = Some(RenderShape::Oval_outline(
+                        id.unwrap_or_default().to_string(), 
+                        Oval::outline_styled( 
+                            radii, 
+                            conrod::LineStyle::new()
+                            .color(stroke_color.unwrap_or(conrod::color::BLACK))
+                            .thickness(stroke_width.unwrap_or_default()))
+                        .xy(pos)));
+                },
+                _ => {},
+            }
+            match shape_fill {
+                Some(f) => app.renderables.push(f),
+                None => {},
+            }
+            match shape_stroke {
+                Some(s) => app.renderables.push(s),
+                None => {},
             }
         }
         _ => {}
