@@ -9,15 +9,12 @@ extern crate cssparser;
 
 use std::fs::File;
 use std::io::Read;
-use std::sync::mpsc;
 use std::default::Default;
 use std::iter;
 use std::string::String;
 
 use conrod::{Theme, Widget};
-
 use piston_window::*;
-
 use xml5ever::tendril::SliceExt;
 use xml5ever::parse;
 use xml5ever::tree_builder::TreeSink;
@@ -141,8 +138,8 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
             &RenderShape::Rectangle(ref id, r) => {
                 r.draw(ui);
             },
-            &RenderShape::Line(ref id, l) => {
-            },
+            &RenderShape::Line(_, l) => {
+            }
             &RenderShape::Ellipse(ref id, o) => {
             },
             &RenderShape::CircleArc(ref id, o) => {
@@ -286,9 +283,9 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
             let mut stroke_linejoin = LineJoin::Miter;
             let mut stroke_miterlimit = None;
             let mut stroke_dasharray = DashArray::None;
-            for (name, mut val) in style.unwrap_or("").split_terminator(';')
-                .map(|s| s.split_at(s.find(':').expect("Point separator error."))) {
-                let (_, mut val) = val.split_at(1);
+            for (name, val) in style.unwrap_or("").split_terminator(';')
+                .map(|s| s.split_at(s.find(':').unwrap_or(s.len()))) {
+                let (_, val) = val.split_at(1);
                 match name {
                     "fill" => {
                         if val.starts_with('#') {
