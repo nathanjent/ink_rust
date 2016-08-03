@@ -13,18 +13,17 @@ use std::default::Default;
 use std::iter;
 use std::string::String;
 
-use conrod::{Theme, Widget};
-use piston_window::*;
+use conrod::{self, Colorable, Labelable, Positionable, Sizeable, Theme, Widget};
+
+use piston_window::{EventLoop, OpenGL, PistonWindow, UpdateEvent, WindowSettings};
+
 use xml5ever::tendril::SliceExt;
 use xml5ever::parse;
 use xml5ever::tree_builder::TreeSink;
 use xml5ever::rcdom;
 use xml5ever::rcdom::{Document, Element, RcDom, Handle};
 
-/// Conrod is backend agnostic. Here, we define the `piston_window` backend to use for our `Ui`.
-type Backend = (piston_window::G2dTexture<'static>, piston_window::Glyphs);
-type Ui = conrod::Ui<Backend>;
-type UiCell<'a> = conrod::UiCell<'a, Backend>;
+use self::svg_canvas::SVGCanvas;
 
 struct InkApp {
     dom: RcDom,
@@ -72,25 +71,31 @@ fn main() {
     let dom: RcDom = parse(iter::once(input), Default::default());
 
     // Construct the window.
-    let mut window: PistonWindow = WindowSettings::new("Inkrust", [720, 360])
-        .opengl(piston_window::OpenGL::V3_2)
+    const WIDTH: u32 = 720;
+    const HEIGHT: u32 = 360;
+    let mut window: PistonWindow = WindowSettings::new("Inkrust", [WIDTH, HEIGHT])
+        .opengl(OpenGL::V3_2)
         .samples(4)
         .exit_on_esc(true)
+        .vsync(true)
         .build()
         .unwrap();
+    window.set_ups(60);
 
-    // Construct our `Ui`.
-    let mut ui = {
-        let assets = find_folder::Search::KidsThenParents(3, 5)
-            .for_folder("assets")
-            .unwrap();
-        let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
-        let theme = Theme::default();
-        let glyph_cache = piston_window::Glyphs::new(
-            &font_path, 
-            window.factory.clone()).unwrap();
-        Ui::new(glyph_cache, theme)
-    };
+    // construct our `Ui`.
+    let mut ui = conrod::Ui::new(conrod::Theme::default());
+
+    // Add a `Font` to the `Ui`'s `font::Map` from file.
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+    let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
+    ui.fonts.insert_from_file(font_path).unwrap();
+
+    // No text to draw, so we'll just create an empty text texture cache.
+    let mut text_texture_cache =
+        conrod::backend::piston_window::GlyphCache::new(&mut window, WIDTH, HEIGHT);
+
+    // The image map describing each of our widget->image mappings (in our case, none).
+    let image_map = conrod::image::Map::new();
 
     let mut app = InkApp::new();
     app.set_dom(dom);
@@ -100,59 +105,71 @@ fn main() {
     // parse dom generating shapes for rendering
     walk("", &mut app, doc);
 
-    window.set_ups(60);
-
     // Poll events from the window.
     while let Some(event) = window.next() {
-        ui.handle_event(event.clone());
-        event.update(|_| ui.set_widgets(|mut ui| set_widgets(&mut ui, &mut app)));
-        window.draw_2d(&event, |c, g| ui.draw_if_changed(c, g));
+
+        // Convert the piston event to a conrod event.
+        if let Some(e) = conrod::backend::piston_window::convert_event(event.clone(), &window) {
+            ui.handle_event(e);
+        }
+        
+        event.update(|_| {
+            ui.set_widgets(|ui_cell| set_ui(ui_cell, &mut app))
+        });
+        window.draw_2d(&event, |c, g| {
+            if let Some(primitives) = ui.draw_if_changed(&image_map) {
+                fn texture_from_image<T>(img: &T) -> &T { img };
+                conrod::backend::piston_window::draw(
+                    c, g, primitives, &mut text_texture_cache, texture_from_image);
+            }
+        });
     }
 }
 
-// Declare the `WidgetId`s and instantiate the widgets.
-fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
+fn set_ui(ref mut ui: conrod::UiCell, app: &mut InkApp) {
     use conrod::{Canvas, };
     use std::iter::once;
 
     widget_ids!{
-        CANVAS,
-        LINE with 64,
-        POINT_PATH with 64,
-        RECTANGLE_FILL with 64,
-        RECTANGLE_OUTLINE with 64,
-        TRAPEZOID,
-        POLYGON with 64,
-        OVAL_FILL with 64,
-        OVAL_OUTLINE with 64,
-        CIRCLE,
-        TEXT with 64,
+        BACKGROUND,
+        SVG_CANVAS,
 	};
 
-    // The background canvas upon which we'll place our widgets.
-    Canvas::new().pad(0.).set(CANVAS, ui);
-
-    let ref rs = app.renderables;
-    for renderable in rs.iter() {
-        match renderable {
-            &RenderShape::Rectangle(ref id, r) => {
-                r.draw(ui);
-            },
-            &RenderShape::Line(_, l) => {
-            }
-            &RenderShape::Ellipse(ref id, o) => {
-            },
-            &RenderShape::CircleArc(ref id, o) => {
-            },
-            &RenderShape::Image(ref id, l) => {
-            },
-//            &RenderShape::Polygon(ref id, p) => {
-//            },
-            &RenderShape::Text(ref id, ref t) => {
-            },
-        }
-    }
+    Canvas::new().color(conrod::color::WHITE).set(BACKGROUND, ui);
+    SVGCanvas::new()
+                .color(conrod::color::rgb(0.0, 0.3, 0.1))
+                .middle_of(BACKGROUND)
+                .w_h(256.0, 256.0)
+                .label_color(conrod::color::BLACK)
+                .label("SVG Canvas")
+                // This is called when the user clicks the button.
+                .react(|| println!("Click"))
+                // Add the widget to the conrod::Ui. This schedules the widget it to be
+                // drawn when we call Ui::draw.
+                .set(SVG_CANVAS, ui);
 }
+
+// TODO SVG Canvas will hold these for rendering
+    //     let ref rs = self.renderables;
+    //     for renderable in rs.iter() {
+    //         match renderable {
+    //             &RenderShape::Rectangle(ref id, r) => {
+    //                 r.draw(ui);
+    //             },
+    //             &RenderShape::Line(_, l) => {
+    //             }
+    //             &RenderShape::Ellipse(ref id, o) => {
+    //             },
+    //             &RenderShape::CircleArc(ref id, o) => {
+    //             },
+    //             &RenderShape::Image(ref id, l) => {
+    //             },
+    //             &RenderShape::Polygon(ref id, p) => {
+    //             },
+    //             &RenderShape::Text(ref id, ref t) => {
+    //             },
+    //         }
+    //     }
 
 pub fn escape_default(s: &str) -> String {
     s.chars().flat_map(|c| c.escape_default()).collect()
