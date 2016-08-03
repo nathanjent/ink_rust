@@ -3,7 +3,6 @@ extern crate conrod;
 extern crate piston_window;
 extern crate find_folder;
 extern crate graphics;
-extern crate lyon;
 extern crate xml5ever;
 extern crate encoding;
 extern crate cssparser;
@@ -16,9 +15,8 @@ use std::iter;
 use std::string::String;
 
 use conrod::{Theme, Widget};
-use piston_window::*;
 
-use lyon::path_builder::*;
+use piston_window::*;
 
 use xml5ever::tendril::SliceExt;
 use xml5ever::parse;
@@ -34,28 +32,23 @@ type UiCell<'a> = conrod::UiCell<'a, Backend>;
 struct InkApp {
     dom: RcDom,
     renderables: Vec<RenderShape>,
-    elem_sender: mpsc::Sender<(usize, usize, bool)>,
-    elem_receiver: mpsc::Receiver<(usize, usize, bool)>,
 }
 
 enum RenderShape {
-    Rect_fill(String, conrod::Rectangle),
-    Rect_outline(String, conrod::Rectangle),
-    Oval_fill(String, conrod::Oval),
-    Oval_outline(String, conrod::Oval),
-    Line(String, conrod::Line),
-    Polyline(String, conrod::PointPath<f32>),
-    Polygon(String, conrod::Polygon<f32>),
+    Rectangle(String, graphics::types::Rectangle),
+    Line(String, graphics::types::Line),
+    Ellipse(String, graphics::Ellipse),
+    CircleArc(String, graphics::CircleArc),
+    Image(String, graphics::Image),
+//    Polygon(String, graphics::types::Polygon),
+    Text(String, graphics::Text),
 }
 
 impl InkApp {
     fn new() -> Self {
-        let (elem_sender, elem_receiver) = mpsc::channel();
         InkApp {
             dom: RcDom::default(),
             renderables: Vec::new(),
-            elem_sender: elem_sender,
-            elem_receiver: elem_receiver,
         }
     }
 
@@ -96,7 +89,9 @@ fn main() {
             .unwrap();
         let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
         let theme = Theme::default();
-        let glyph_cache = piston_window::Glyphs::new(&font_path, window.factory.clone()).unwrap();
+        let glyph_cache = piston_window::Glyphs::new(
+            &font_path, 
+            window.factory.clone()).unwrap();
         Ui::new(glyph_cache, theme)
     };
 
@@ -120,7 +115,7 @@ fn main() {
 
 // Declare the `WidgetId`s and instantiate the widgets.
 fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
-    use conrod::{Canvas, Circle, Line, Oval, PointPath, Polygon, Positionable, Rectangle, Text};
+    use conrod::{Canvas, };
     use std::iter::once;
 
     widget_ids!{
@@ -138,59 +133,28 @@ fn set_widgets(ui: &mut UiCell, app: &mut InkApp) {
 	};
 
     // The background canvas upon which we'll place our widgets.
-    Canvas::new().pad(80.0).set(CANVAS, ui);
+    Canvas::new().pad(0.).set(CANVAS, ui);
 
     let ref rs = app.renderables;
     for renderable in rs.iter() {
         match renderable {
-            &RenderShape::Rect_fill(ref id, r) => {
-                r.set(RECTANGLE_FILL, ui);
-            }
-            &RenderShape::Rect_outline(ref id, r) => {
-                r.set(RECTANGLE_OUTLINE, ui);
-            }
-            &RenderShape::Oval_fill(ref id, o) => {
-                o.set(OVAL_FILL, ui);
-            }
-            &RenderShape::Oval_outline(ref id, o) => {
-                o.set(OVAL_OUTLINE, ui);
-            }
+            &RenderShape::Rectangle(ref id, r) => {
+                r.draw(ui);
+            },
             &RenderShape::Line(ref id, l) => {
-                l.set(LINE, ui);
-            }
-            &RenderShape::Polyline(ref id, ref p) => {
-                // p.set(LINE, ui);
-            }
-            &RenderShape::Polygon(ref id, p) => {
-                // p.set(POLYGON, ui);
-            }
+            },
+            &RenderShape::Ellipse(ref id, o) => {
+            },
+            &RenderShape::CircleArc(ref id, o) => {
+            },
+            &RenderShape::Image(ref id, l) => {
+            },
+//            &RenderShape::Polygon(ref id, p) => {
+//            },
+            &RenderShape::Text(ref id, ref t) => {
+            },
         }
     }
-
-    // Line::centred([-40.0, -40.0], [40.0, 40.0]).top_left_of(CANVAS).set(LINE, ui);
-
-    // let left = [-40.0, -40.0];
-    // let top = [0.0, 40.0];
-    // let right = [40.0, -40.0];
-    // let points = once(left).chain(once(top)).chain(once(right));
-    // PointPath::centred(points).down(80.0).set(POINT_PATH, ui);
-
-    // Rectangle::fill([80.0, 80.0]).down(80.0).set(RECTANGLE_FILL, ui);
-
-    // Rectangle::outline([80.0, 80.0]).down(80.0).set(RECTANGLE_OUTLINE, ui);
-
-    // let bl = [-40.0, -40.0];
-    // let tl = [-20.0, 40.0];
-    // let tr = [20.0, 40.0];
-    // let br = [40.0, -40.0];
-    // let points = once(bl).chain(once(tl)).chain(once(tr)).chain(once(br));
-    // Polygon::centred_fill(points).right_from(LINE, 80.0).set(TRAPEZOID, ui);
-
-    // Oval::fill([40.0, 80.0]).down(80.0).align_middle_x().set(OVAL_FILL, ui);
-
-    // Oval::outline([80.0, 40.0]).down(100.0).align_middle_x().set(OVAL_OUTLINE, ui);
-
-    // Circle::fill(40.0).down(100.0).align_middle_x().set(CIRCLE, ui);
 }
 
 pub fn escape_default(s: &str) -> String {
@@ -198,10 +162,7 @@ pub fn escape_default(s: &str) -> String {
 }
 
 fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
-    use conrod::{Rectangle, Oval, Circle, Dimensions, Point, ShapeStyle, Positionable, Color};
-    // use graphics::Rectangle;
-    use graphics::rectangle::{Shape, Border};
-    // use graphics::types::Scalar;
+    use graphics::{Rectangle, Line, Ellipse, CircleArc, Image, Polygon, Text};
 
     let node = doc.borrow();
 
@@ -231,78 +192,78 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                     v @ ("id", _) => {
                         let (_, v) = v;
                         id = Some(v);
-                        println!("id: {:?}", v);
-                    }
+                        println!("id: {:?}", id);
+                    },
                     v @ ("style", _) => {
                         let (_, v) = v;
                         style = Some(v);
-                        println!("{:?}", v);
-                    }
+                        println!("style: {:?}", v);
+                    },
                     v @ ("x", _) => {
                         let (_, v) = v;
                         pos[0] = v.parse::<f64>().unwrap_or(0.);
-                        println!("x: {:?}", v);
-                    }
+                        println!("x: {:?}", pos[0]);
+                    },
                     v @ ("y", _) => {
                         let (_, v) = v;
                         pos[1] = v.parse::<f64>().unwrap_or(0.);
-                        println!("y: {:?}", v);
-                    }
+                        println!("y: {:?}", pos[1]);
+                    },
                     v @ ("width", _) => {
                         let (_, v) = v;
                         size[0] = v.parse::<f64>().unwrap_or(1.);
-                        println!("width: {:?}", v);
-                    }
+                        println!("width: {:?}", size[0]);
+                    },
                     v @ ("height", _) => {
                         let (_, v) = v;
                         size[1] = v.parse::<f64>().unwrap_or(1.);
-                        println!("height: {:?}", v);
-                    }
+                        println!("height: {:?}", size[1]);
+                    },
                     v @ ("rx", _) => {
                         let (_, v) = v;
                         radii[0] = v.parse::<f64>().unwrap_or(1.);
-                        println!("rx: {:?}", v);
-                    }
+                        println!("rx: {:?}", radii[0]);
+                    },
                     v @ ("ry", _) => {
                         let (_, v) = v;
                         radii[1] = v.parse::<f64>().unwrap_or(1.);
-                        println!("ry: {:?}", v);
-                    }
+                        println!("ry: {:?}", radii[1]);
+                    },
                     v @ ("cx", _) => {
                         let (_, v) = v;
                         pos[0] = v.parse::<f64>().unwrap_or(0.);
-                        println!("cx: {:?}", v);
-                    }
+                        println!("cx: {:?}", pos[0]);
+                    },
                     v @ ("cy", _) => {
                         let (_, v) = v;
                         pos[1] = v.parse::<f64>().unwrap_or(0.);
-                        println!("cy: {:?}", v);
-                    }
+                        println!("cy: {:?}", pos[1]);
+                    },
                     v @ ("r", _) => {
                         let (_, v) = v;
                         radii = [v.parse::<f64>().unwrap_or(1.); 2];
-                        println!("cy: {:?}", v);
-                    }
+                        println!("r: {:?}", radii);
+                    },
                     v @ ("x1", _) => {
                         let (_, v) = v;
                         pos1[0] = v.parse::<f64>().unwrap_or(0.);
-                        println!("x1: {:?}", v);
-                    }
+                        println!("x1: {:?}", pos1[0]);
+                    },
                     v @ ("y1", _) => {
                         let (_, v) = v;
                         pos1[1] = v.parse::<f64>().unwrap_or(0.);
-                        println!("y1: {:?}", v);
-                    }
+                        println!("y1: {:?}", pos1[1]);
+                    },
                     v @ ("x2", _) => {
                         let (_, v) = v;
                         pos2[0] = v.parse::<f64>().unwrap_or(0.);
-                        println!("x2: {:?}", v);
-                    }
+                        println!("x2: {:?}", pos2[0]);
+                    },
                     v @ ("y2", _) => {
                         let (_, v) = v;
                         pos2[1] = v.parse::<f64>().unwrap_or(0.);
-                        println!("y2: {:?}", v);
-                    }
+                        println!("y2: {:?}", pos2[1]);
+                    },
                     v @ ("points", _) => {
                         let (_, v) = v;
                         points = v.split_whitespace()
@@ -310,8 +271,8 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             .map(|(x, y)| { (x.parse::<f64>().ok(), y.parse::<f64>().ok()) })
                             .collect();
                         println!("points: {:?}", v);
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
 
@@ -326,7 +287,7 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
             let mut stroke_miterlimit = None;
             let mut stroke_dasharray = DashArray::None;
             for (name, mut val) in style.unwrap_or("").split_terminator(';')
-                .map(|s| s.split_at(s.find(':').expect("Find point separator error."))) {
+                .map(|s| s.split_at(s.find(':').expect("Point separator error."))) {
                 let (_, mut val) = val.split_at(1);
                 match name {
                     "fill" => {
@@ -335,23 +296,26 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             fill_color = parse_color_hash(hex_str).ok();
                         }
                         println!("fill:#{:?}", val);
-                    }
+                    },
                     "fill-opacity" => {
                         fill_opacity = val.parse::<f64>().ok();
-                    }
+                        println!("fill-opacity:{:?}", val);
+                    },
                     "stroke" => {
                         if val.starts_with('#') {
                             let (_, hex_str) = val.split_at(1);
                             stroke_color = parse_color_hash(hex_str).ok();
                         }
                         println!("stroke:#{:?}", val);
-                    }
+                    },
                     "stroke-opacity" => {
                         stroke_opacity = val.parse::<f64>().ok();
-                    }
+                        println!("stroke-opacity:{:?}", val);
+                    },
                     "stroke-width" => {
                         stroke_width = val.parse::<f64>().ok();
-                    }
+                        println!("stroke-width:{:?}", val);
+                    },
                     "stroke-linecap" => {
                         stroke_linecap = match val {
                             "butt" => LineCap::Butt,
@@ -360,7 +324,7 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             "inherit" => LineCap::Inherit,
                             _ => LineCap::Inherit,
                         };
-                    }
+                    },
                     "stroke-linejoin" => {
                         stroke_linejoin = match val {
                             "miter" => LineJoin::Miter,
@@ -369,10 +333,10 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                             "inherit" => LineJoin::Inherit,
                             _ => LineJoin::Inherit,
                         };
-                    }
+                    },
                     "stroke-miterlimit" => {
                         stroke_miterlimit = val.parse::<f64>().ok();
-                    }
+                    },
                     "stroke-dasharray" => {
                         stroke_dasharray = match val {
                             "none" => DashArray::None,
@@ -385,74 +349,31 @@ fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
                                 DashArray::DashArray(values)
                             }
                         };
-                    }
+                    },
                     _ => continue,
                 }
-                println!("{}:{};", name, val);
             }
-            let mut shape_fill = None;
-            let mut shape_stroke = None;
+            let mut shape = None;
             match lname {
                 "rect" => {
-                    shape_fill = Some(RenderShape::Rect_fill(
-                        id.unwrap_or_default().to_string(), 
-                        Rectangle::fill_with(
-                            size, 
-                            fill_color.unwrap_or(conrod::color::BLACK))
-                        .xy(pos)));
-                    shape_stroke = Some(RenderShape::Rect_outline(
-                        id.unwrap_or_default().to_string(), 
-                        Rectangle::outline_styled(
-                            size, 
-                            conrod::LineStyle::new()
-                            .color(stroke_color.unwrap_or(conrod::color::BLACK))
-                            .thickness(stroke_width.unwrap_or_default()))
-                        .xy(pos)));
+                    let rect = rectangle::centered([pos[0], pos[1], size[0], size[1]]);
+                    rect.color(fill_color.unwrap_or([1.;4]));
+                    shape = Some(RenderShape::Rectangle(
+                            id.unwrap_or_default().to_string(), 
+                            rect));
                 },
-                "ellipse" => {
-                    shape_fill = Some(RenderShape::Oval_fill(
-                        id.unwrap_or_default().to_string(), 
-                        Oval::fill_with(
-                            radii,
-                            fill_color.unwrap_or(conrod::color::BLACK))
-                        .xy(pos)));
-                    shape_stroke = Some(RenderShape::Oval_outline(
-                        id.unwrap_or_default().to_string(), 
-                        Oval::outline_styled( 
-                            radii, 
-                            conrod::LineStyle::new()
-                            .color(stroke_color.unwrap_or(conrod::color::BLACK))
-                            .thickness(stroke_width.unwrap_or_default()))
-                        .xy(pos)));
-                },
-                "circle" => {
-                    shape_fill = Some(RenderShape::Oval_fill(
-                        id.unwrap_or_default().to_string(), 
-                        Oval::fill_with(
-                            radii,
-                            fill_color.unwrap_or(conrod::color::BLACK))
-                        .xy(pos)));
-                    shape_stroke = Some(RenderShape::Oval_outline(
-                        id.unwrap_or_default().to_string(), 
-                        Oval::outline_styled( 
-                            radii, 
-                            conrod::LineStyle::new()
-                            .color(stroke_color.unwrap_or(conrod::color::BLACK))
-                            .thickness(stroke_width.unwrap_or_default()))
-                        .xy(pos)));
-                },
+//                "ellipse" => {
+//                },
+//                "circle" => {
+//                },
                 _ => {},
             }
-            match shape_fill {
-                Some(f) => app.renderables.push(f),
-                None => {},
-            }
-            match shape_stroke {
+            match shape {
                 Some(s) => app.renderables.push(s),
                 None => {},
             }
-        }
-        _ => {}
+        },
+        _ => {},
     }
 
     let new_indent = {
@@ -492,7 +413,7 @@ enum DashArray {
     Inherit,
 }
 
-fn parse_color_hash(value: &str) -> Result<conrod::Color, ()> {
+fn parse_color_hash(value: &str) -> Result<graphics::types::Color, ()> {
     let value = value.as_bytes();
     match value.len() {
         8 => {
@@ -521,12 +442,12 @@ fn parse_color_hash(value: &str) -> Result<conrod::Color, ()> {
     }
 }
 
-fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Result<conrod::Color, ()> {
-    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., alpha / 255.))
+fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Result<graphics::types::Color, ()> {
+    Ok([red / 255., green / 255., blue / 255., alpha / 255.])
 }
 
-fn rgb(red: f32, green: f32, blue: f32) -> Result<conrod::Color, ()> {
-    Ok(conrod::Color::Rgba(red / 255., green / 255., blue / 255., 1.))
+fn rgb(red: f32, green: f32, blue: f32) -> Result<graphics::types::Color, ()> {
+    Ok([red / 255., green / 255., blue / 255., 1.])
 }
 
 fn from_hex(c: u8) -> Result<u8, ()> {
