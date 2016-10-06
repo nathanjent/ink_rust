@@ -6,11 +6,11 @@ extern crate graphics;
 extern crate xml5ever;
 extern crate encoding;
 extern crate cssparser;
-extern crate nom;
 
 mod inkapp;
 mod svg_canvas;
 mod svg_parser;
+mod svgdom;
 
 use std::fs::File;
 use std::io::Read;
@@ -25,12 +25,10 @@ use piston_window::{EventLoop, OpenGL, PistonWindow, UpdateEvent, WindowSettings
 use xml5ever::tendril::SliceExt;
 use xml5ever::parse;
 use xml5ever::tree_builder::TreeSink;
-use xml5ever::rcdom::{RcDom, Handle};
 
 use inkapp::InkApp;
 use svg_canvas::SVGCanvas;
 use svg_parser::walk;
-
 
 fn main() {
     let mut file = File::open("tests/documents/testrect.svg").expect("File read error.");
@@ -43,7 +41,7 @@ fn main() {
 
     let input = file_string.to_tendril();
 
-    let dom: RcDom = parse(iter::once(input), Default::default());
+    let dom: svgdom::SVGDom = parse(iter::once(input), Default::default());
 
     // Construct the window.
     const WIDTH: u32 = 720;

@@ -1,9 +1,9 @@
-use xml5ever::rcdom::{RcDom, Handle};
+use svgdom::{SVGDom, Handle};
 use xml5ever::tree_builder::TreeSink;
 use xml5ever::tokenizer::Attribute;
 
 pub struct InkApp {
-    pub dom: RcDom,
+    pub dom: SVGDom,
     renderables: Vec<RenderShape>,
 }
 
@@ -20,7 +20,7 @@ pub enum RenderShape {
 impl InkApp {
     pub fn new() -> Self {
         InkApp {
-            dom: RcDom::default(),
+            dom: SVGDom::default(),
             renderables: Vec::new(),
         }
     }
