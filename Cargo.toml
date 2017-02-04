@@ -1,20 +1,18 @@
 [package]
-
+authors = ["Nathan Jent <nathanjent@nathanjent.com>"]
 name = "ink_rust"
 version = "0.0.1"
-authors = [ "Nathan Jent <nathanjent@nathanjent.com>" ]
 
 [[bin]]
-
 name = "ink_rust"
 
 [dependencies]
-conrod = "0.38.*"
-piston2d-graphics = "0.17.*"
-find_folder = "0.3.*"
-piston_window = "0.51.*"
-rand = "0.3.*"
-lyon = "0.1.*"
-xml5ever = "0.1.*"
-encoding = "0.2"
-cssparser = "0.5.*"
+clap = {version = "~2.19.0", features = ["yaml"]}
+conrod = "0.51.1"
+encoding = "0.2.33"
+error-chain = "0.8.1"
+find_folder = "0.3.0"
+piston2d-graphics = "0.21.1"
+piston_window = "0.64.0"
+slog = "1.4.1"
+svgparser = "0.2.1"
