@@ -1,12 +1,127 @@
+use svgparser::*;
+use graphics::types::Color;
+use errors::*;
+
+use std::collections::HashMap;
+use std::str;
 
 use inkapp::{InkApp, RenderShape};
-use graphics::types::Color;
-use svgdom::{Document, Element, Handle, Text as DomText};
+//use svgdom::{Document, Element, Handle, Text as DomText};
+
+#[derive(Debug)]
+struct SvgElement<'dom> {
+    id: Option<ElementId>,
+    attrs: HashMap<AttributeId, AttributeValue<'dom>>,
+}
+
+impl<'dom> SvgElement<'dom> {
+    fn new() -> Self {
+        SvgElement {
+            id: None,
+            attrs: HashMap::new(),
+        }
+    }
+}
+
+pub fn parse(svg_str: &[u8]) -> Result<()> {
+    let mut p = svg::Tokenizer::new(&svg_str);
+    loop {
+        if let Ok(svg_token) = p.parse_next() {
+            let mut element = SvgElement::new();
+            match svg_token {
+                svg::Token::ElementStart(el_name) => {
+                    element.id = ElementId::from_name(u8_to_str!(el_name));
+                },
+                svg::Token::ElementEnd(end) => {
+                    match end {
+                        svg::ElementEnd::Open => {},
+                        svg::ElementEnd::Close(elem) => {
+                            element.id = ElementId::from_name(u8_to_str!(elem));
+                        },
+                        svg::ElementEnd::Empty => {},
+                    }
+                },
+                svg::Token::Attribute(name, mut value) => {
+                    if let Some(a) = AttributeId::from_name(u8_to_str!(name)) {
+                        if let Some(id) = element.id.clone() {
+                            if let Ok(v) = AttributeValue::from_stream(
+                                id, a.clone(), &mut value)
+                            {
+                                element.attrs.insert(a, v);
+                            }
+                        }
+                    }
+                    match name {
+                        b"style" => {
+                            let mut s = style::Tokenizer::new(value);
+                            loop {
+                                if let Ok(style_token) = s.parse_next() {
+                                    match style_token {
+                                        style::Token::Attribute(name, value) => {
+                                            if let Ok(name) = str::from_utf8(name) {
+                                                println!("  {:?}", name);
+                                            }
+                                        },
+                                        style::Token::EntityRef(name) => {
+                                            if let Ok(name) = str::from_utf8(name) {
+                                                println!("Entity  {:?}", name)
+                                            }
+                                        },
+                                        style::Token::EndOfStream => break,
+                                    }
+                                } else {
+                                    // TODO handle warning
+                                    break;
+                                }
+                            }
+                        },
+                        b"d" => {
+                            let mut p = path::Tokenizer::new(value);
+                            loop {
+                                if let Ok(segment_token) = p.parse_next() {
+                                    match segment_token {
+                                        path::SegmentToken::Segment(segment) => {
+                                            println!("  {:?}", segment)
+                                        }
+                                        path::SegmentToken::EndOfStream => break,
+                                    }
+                                } else {
+                                    // By SVG spec, invalid data occurred in the path should
+                                    // stop parsing of this path, but not the whole document.
+                                    // So we just show a warning and continue parsing.
+                                    //println!("Warning: {:?}.", e);
+                                    // TODO handle warning
+                                    break;
+                                }
+                            }
+                        }
+                        _ => {},
+                    }
+                }
+                svg::Token::Text(_stream) => {},
+                svg::Token::Cdata(_stream) => {},
+                svg::Token::Whitespace(_u8slice) => {},
+                svg::Token::Comment(_u8slice) => {},
+                svg::Token::DtdEmpty(_u8slice) => {},
+                svg::Token::DtdStart(_u8slice) => {},
+                svg::Token::Entity(_u8slice, _stream) => {},
+                svg::Token::DtdEnd => {},
+                svg::Token::Declaration(_u8slice) => {},
+                svg::Token::EndOfStream => break,
+            }
+            println!("{:?}", element);
+        } else {
+            bail!("SVG parsing error.");
+        }
+    }
+    Ok(())
+}
 
 fn escape_default(s: &str) -> String {
     s.chars().flat_map(|c| c.escape_default()).collect()
 }
 
+/*
 pub fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
 
     let node = doc.borrow();
@@ -243,7 +358,7 @@ pub fn walk(prefix: &str, mut app: &mut InkApp, doc: Handle) {
         walk(&new_indent, &mut app, child.clone());
     }
 }
-
+*/
 
 enum LineCap {
     Butt,
@@ -265,48 +380,49 @@ enum DashArray {
     Inherit,
 }
 
-fn parse_color_hash(value: &str) -> Result<Color, ()> {
+fn parse_color_hash(value: &str) -> Result<Color> {
     let value = value.as_bytes();
     match value.len() {
         8 => {
-            rgba((try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
-                 (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
-                 (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32,
-                 (try!(from_hex(value[6])) * 16 + try!(from_hex(value[7]))) as f32)
+            rgba((from_hex(value[0])? * 16 + from_hex(value[1])?) as f32,
+                 (from_hex(value[2])? * 16 + from_hex(value[3])?) as f32,
+                 (from_hex(value[4])? * 16 + from_hex(value[5])?) as f32,
+                 (from_hex(value[6])? * 16 + from_hex(value[7])?) as f32)
         }
         6 => {
-            rgb((try!(from_hex(value[0])) * 16 + try!(from_hex(value[1]))) as f32,
-                (try!(from_hex(value[2])) * 16 + try!(from_hex(value[3]))) as f32,
-                (try!(from_hex(value[4])) * 16 + try!(from_hex(value[5]))) as f32)
+            rgb((from_hex(value[0])? * 16 + from_hex(value[1])?) as f32,
+                (from_hex(value[2])? * 16 + from_hex(value[3])?) as f32,
+                (from_hex(value[4])? * 16 + from_hex(value[5])?) as f32)
         }
         4 => {
-            rgba((try!(from_hex(value[0])) * 17) as f32,
-                 (try!(from_hex(value[1])) * 17) as f32,
-                 (try!(from_hex(value[2])) * 17) as f32,
-                 (try!(from_hex(value[3])) * 17) as f32)
+            rgba((from_hex(value[0])? * 17) as f32,
+                 (from_hex(value[1])? * 17) as f32,
+                 (from_hex(value[2])? * 17) as f32,
+                 (from_hex(value[3])? * 17) as f32)
         }
         3 => {
-            rgb((try!(from_hex(value[0])) * 17) as f32,
-                (try!(from_hex(value[1])) * 17) as f32,
-                (try!(from_hex(value[2])) * 17) as f32)
+            rgb((from_hex(value[0])? * 17) as f32,
+                (from_hex(value[1])? * 17) as f32,
+                (from_hex(value[2])? * 17) as f32)
         }
-        _ => Err(()),
+        _ => bail!("{} is not a valid color value"),
     }
 }
 
-fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Result<Color, ()> {
+fn rgba(red: f32, green: f32, blue: f32, alpha: f32) -> Result<Color> {
     Ok([red / 255., green / 255., blue / 255., alpha / 255.])
 }
 
-fn rgb(red: f32, green: f32, blue: f32) -> Result<Color, ()> {
+fn rgb(red: f32, green: f32, blue: f32) -> Result<Color> {
     Ok([red / 255., green / 255., blue / 255., 1.])
 }
 
-fn from_hex(c: u8) -> Result<u8, ()> {
+fn from_hex(c: u8) -> Result<u8> {
+
     match c {
         b'0'...b'9' => Ok(c - b'0'),
         b'a'...b'f' => Ok(c - b'a' + 10),
         b'A'...b'F' => Ok(c - b'A' + 10),
-        _ => Err(()),
+        _ => bail!("{} is not a hexidecimal value"),
     }
 }
