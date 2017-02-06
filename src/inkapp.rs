@@ -1,4 +1,4 @@
-//use svgdom::{SVGDom, Handle};
+// use svgdom::{SVGDom, Handle};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
@@ -6,11 +6,12 @@ use std::path::Path;
 use errors::*;
 
 use svg_parser;
+use display;
 
 pub struct InkApp {
-    //    pub dom: SVGDom,
+    // pub dom: SVGDom,
     renderables: Vec<RenderShape>,
-    //    ui: Ui,
+    // ui: Ui,
     view: [f64; 4], // [x, y, width, height]
     window: [u32; 2], // [width, height]
 
@@ -45,8 +46,8 @@ impl InkApp {
     }
 
     pub fn open<T: Into<String> + AsRef<Path>>(file: T) -> Result<Self> {
-        let mut file = File::open(&file).chain_err(|| "Unable to open file")?;
-        let t = load_file(&mut file).chain_err(|| "Unable to load file")?;
+        let mut file = File::open(&file).chain_err(|| "Unable to open file")?;;;
+        let t = load_file(&mut file).chain_err(|| "Unable to load file")?;;;
 
         let ink_app = InkApp {
             renderables: Vec::new(),
@@ -62,7 +63,8 @@ impl InkApp {
         Ok(ink_app)
     }
 
-    pub fn start(&self) -> Result<()> {
+    pub fn start(&mut self) -> Result<()> {
+        display::load(self);
         Ok(())
     }
 

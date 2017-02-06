@@ -1,22 +1,24 @@
 #![recursion_limit = "1024"]
 
 #[macro_use]
+extern crate conrod;
+
+#[macro_use]
 extern crate error_chain;
 #[macro_use]
 extern crate clap;
 #[macro_use]
-extern crate conrod;
-#[macro_use]
 extern crate svgparser;
-extern crate piston_window as pw;
-extern crate graphics;
+//extern crate piston_window as pw;
+//extern crate graphics;
 extern crate find_folder;
 extern crate encoding;
 
 mod inkapp;
 mod svg_parser;
-//mod svg_canvas;
-//mod svgdom;
+mod display;
+// mod svg_canvas;
+// mod svgdom;
 
 mod errors {
     error_chain!{}
@@ -53,7 +55,7 @@ fn run() -> Result<()> {
     let yaml = load_yaml!("cli.yml");
     let matches = App::from_yaml(yaml).get_matches();
 
-    let ink_app;
+    let mut ink_app;
     if let Some(filename) = m.value_of("INPUT") {
         ink_app = InkApp::open(filename).chain_err(|| "Unable to open Inkrust")?;
     } else {
@@ -69,7 +71,7 @@ fn run() -> Result<()> {
     use inkapp::InkApp;
 
     // Just load example asset for now
-    let ink_app =
+    let mut ink_app =
         InkApp::open("tests/documents/testrect.svg").chain_err(|| "Unable to open Inkrust")?;
 
     ink_app.start()?;

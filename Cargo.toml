@@ -7,7 +7,6 @@ version = "0.0.1"
 name = "ink_rust"
 
 [dependencies]
-conrod = "0.51.1"
 encoding = "0.2.33"
 error-chain = "0.8.1"
 find_folder = "0.3.0"
@@ -19,3 +18,7 @@ svgparser = "0.2.1"
 [dependencies.clap]
 version = "~2.19.0"
 features = ["yaml"]
+
+[dependencies.conrod]
+version = "0.51.0"
+features = ["glium", "winit", "piston"]
