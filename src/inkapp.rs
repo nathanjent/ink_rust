@@ -1,7 +1,7 @@
-// use svgdom::{SVGDom, Handle};
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
+use svgdom::Document;
 
 use errors::*;
 
@@ -21,6 +21,7 @@ pub struct InkApp {
 
     // Upon drawing, we draw once more in the next frame
     redraw_echo_queued: bool,
+    dom: Document,
 }
 
 pub enum RenderShape {
@@ -34,33 +35,29 @@ pub enum RenderShape {
 }
 
 impl InkApp {
-    pub fn new() -> Result<Self> {
-        Ok(InkApp {
+    pub fn new() -> Self {
+        InkApp {
             renderables: Vec::new(),
             view: [-10., -10., 600., 400.],
             window: [640, 480],
             rebuild_queued: false,
             redraw_queued: false,
             redraw_echo_queued: false,
-        })
+            dom: Document::default(),
+        }
     }
 
-    pub fn open<T: Into<String> + AsRef<Path>>(file: T) -> Result<Self> {
-        let mut file = File::open(&file).chain_err(|| "Unable to open file")?;;;
-        let t = load_file(&mut file).chain_err(|| "Unable to load file")?;;;
-
-        let ink_app = InkApp {
-            renderables: Vec::new(),
-            view: [-10., -10., 600., 400.],
-            window: [640, 480],
-            rebuild_queued: false,
-            redraw_queued: false,
-            redraw_echo_queued: false,
-        };
+    pub fn open<T: Into<String> + AsRef<Path>>(&mut self, file: T) -> Result<()> {
+        let mut file = File::open(&file).chain_err(|| "Unable to open file")?;
+        let t = load_file(&mut file).chain_err(|| "Unable to load file")?;
 
         let svg = svg_parser::parse(&t);
+        self.dom = match Document::from_data(&t) {
+            Ok(doc) => doc,
+            Err(e) => bail!("SVG parse error: {}", e),
+        };
 
-        Ok(ink_app)
+        Ok(())
     }
 
     pub fn start(&mut self) -> Result<()> {

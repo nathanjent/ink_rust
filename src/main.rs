@@ -9,6 +9,7 @@ extern crate error_chain;
 extern crate clap;
 #[macro_use]
 extern crate svgparser;
+extern crate svgdom;
 //extern crate piston_window as pw;
 //extern crate graphics;
 extern crate find_folder;
@@ -18,13 +19,14 @@ mod inkapp;
 mod svg_parser;
 mod display;
 // mod svg_canvas;
-// mod svgdom;
 
 mod errors {
     error_chain!{}
 }
 
 use errors::*;
+
+
 
 fn main() {
     if let Err(ref e) = run() {
@@ -47,33 +49,21 @@ fn main() {
     }
 }
 
-#[cfg(feature = "yaml")]
 fn run() -> Result<()> {
     use inkapp::InkApp;
     use clap::App;
 
-    let yaml = load_yaml!("cli.yml");
-    let matches = App::from_yaml(yaml).get_matches();
+    //let yaml = load_yaml!("cli.yml");
+    //let matches = App::from_yaml(yaml).get_matches();
 
-    let mut ink_app;
-    if let Some(filename) = m.value_of("INPUT") {
-        ink_app = InkApp::open(filename).chain_err(|| "Unable to open Inkrust")?;
-    } else {
-        ink_app = InkApp::new();
-    }
+    let mut ink_app = InkApp::new();
+    let mut filename = "tests/documents/testrect.svg";
+    //if let Some(f) = matches.value_of("INPUT") {
+    //    filename = f;
+    //}
+    ink_app.open(filename).chain_err(|| "Unable to open file")?;
 
-    ink_app.start()?;
-    Ok(())
-}
-
-#[cfg(not(feature = "yaml"))]
-fn run() -> Result<()> {
-    use inkapp::InkApp;
-
-    // Just load example asset for now
-    let mut ink_app =
-        InkApp::open("tests/documents/testrect.svg").chain_err(|| "Unable to open Inkrust")?;
-
-    ink_app.start()?;
+    ink_app.start()
+        .chain_err(|| "Unable to start Inkrust")?;
     Ok(())
 }

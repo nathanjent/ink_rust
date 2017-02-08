@@ -1,48 +1,61 @@
-use inkapp::InkApp;
 use conrod;
 use conrod::{widget, Colorable, Positionable, Sizeable, Widget};
 use conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
+use errors::*;
+
 use find_folder;
 use std;
 
-pub fn load(app: &mut InkApp) {
+
+use inkapp::InkApp;
+
+pub fn load(app: &mut InkApp) -> Result<()> {
     const WIDTH: u32 = 400;
     const HEIGHT: u32 = 200;
 
     // Build the window.
-    let display = glium::glutin::WindowBuilder::new()
+    let display = match glium::glutin::WindowBuilder::new()
         .with_vsync()
         .with_dimensions(WIDTH, HEIGHT)
         .with_title("Hello Conrod!")
-        .build_glium()
-        .unwrap();
+        .build_glium() {
+            Ok(d) => d,
+            Err(e) => bail!("Could not build display {}", e),
+        };
 
     // construct our `Ui`.
     let mut ui = conrod::UiBuilder::new([WIDTH as f64, HEIGHT as f64]).build();
 
     // Generate the widget identifiers.
-    widget_ids!(struct Ids { text });
+    widget_ids!(struct Ids {
+        text,
+        background
+    });
     let ids = Ids::new(ui.widget_id_generator());
 
     // Add a `Font` to the `Ui`'s `font::Map` from file.
-    let assets
-        = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
+    let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets")
+        .chain_err(|| "Asset folder not found")?;
     let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
-    let regular = ui.fonts.insert_from_file(font_path).unwrap();
+    let regular = ui.fonts.insert_from_file(font_path)
+        .chain_err(|| "Font not found")?;
 
-        // A type used for converting `conrod::render::Primitives` into `Command`s
-        // that can be used for drawing to the glium `Surface`.
-        let mut renderer = conrod::backend::glium::Renderer::new(&display).unwrap();
+    // A type used for converting `conrod::render::Primitives` into `Command`s
+    // that can be used for drawing to the glium `Surface`.
+    let mut renderer = match conrod::backend::glium::Renderer::new(&display) {
+            Ok(r) => r,
+            Err(e) => bail!("Could not create renderer {:?}", e),
+        };
 
-        // The image map describing each of our widget->image mappings
-        // (in our case, none).
-        let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
+    // The image map describing each of our widget->image mappings
+    // (in our case, none).
+    let image_map = conrod::image::Map::<glium::texture::Texture2d>::new();
 
-        // Poll events from the window.
-        let mut last_update = std::time::Instant::now();
-        let mut ui_needs_update = true;
-        'main: loop {
+    // Poll events from the window.
+    let mut last_update = std::time::Instant::now();
+    let mut ui_needs_update = true;
+    'main: loop {
 
         // We don't want to loop any faster than 60 FPS,
         // so wait until it has been at least 16ms since the last yield.
@@ -88,6 +101,8 @@ pub fn load(app: &mut InkApp) {
         {
             let ui = &mut ui.set_widgets();
 
+             widget::Canvas::new().color(conrod::color::DARK_RED).set(ids.background, ui);
+
             // "Hello World!" in the middle of the screen.
             widget::Text::new("Hello World!")
                 .middle_of(ui.window)
@@ -101,8 +116,13 @@ pub fn load(app: &mut InkApp) {
             renderer.fill(&display, primitives, &image_map);
             let mut target = display.draw();
             target.clear_color(0.0, 0.0, 0.0, 1.0);
-            renderer.draw(&display, &mut target, &image_map).unwrap();
-            target.finish().unwrap();
+            match renderer.draw(&display, &mut target, &image_map) {
+                Ok(_) => {},
+                Err(e) => bail!("Could not create renderer {:?}", e),
+            }
+            target.finish()
+                .chain_err(|| "Could not finish {}")?;
         }
     }
+    Ok(())
 }
