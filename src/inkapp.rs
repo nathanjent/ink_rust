@@ -1,9 +1,10 @@
+use errors::*;
+
+use svgdom::Document;
+
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::Path;
-use svgdom::Document;
-
-use errors::*;
 
 use svg_parser;
 use display;
@@ -21,7 +22,7 @@ pub struct InkApp {
 
     // Upon drawing, we draw once more in the next frame
     redraw_echo_queued: bool,
-    dom: Document,
+    pub dom: Document,
 }
 
 pub enum RenderShape {

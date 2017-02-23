@@ -10,23 +10,23 @@ extern crate clap;
 #[macro_use]
 extern crate svgparser;
 extern crate svgdom;
-//extern crate piston_window as pw;
-//extern crate graphics;
 extern crate find_folder;
 extern crate encoding;
 
+#[macro_use]
+extern crate glium;
+extern crate lyon;
+
 mod inkapp;
 mod svg_parser;
+mod svg_builder;
 mod display;
-// mod svg_canvas;
 
 mod errors {
     error_chain!{}
 }
 
 use errors::*;
-
-
 
 fn main() {
     if let Err(ref e) = run() {

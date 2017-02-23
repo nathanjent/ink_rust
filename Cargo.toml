@@ -15,11 +15,17 @@ piston_window = "0.64.0"
 slog = "1.4.1"
 svgdom = "0.3.1"
 svgparser = "0.2.1"
+gfx = "0.13"
+gfx_device_gl = "0.12"
+gfx_window_glutin = "0.13"
+glutin = "0.6.1"
+glium = "0.15.0"
+lyon = "0.3.2"
 
 [dependencies.clap]
 features = ["yaml"]
 version = "~2.19.0"
 
 [dependencies.conrod]
-features = ["glium", "winit", "piston"]
-version = "0.51.0"
+#features = ["glium", "winit", "piston"]
+version = "0.48.0"
