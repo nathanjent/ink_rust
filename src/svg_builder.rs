@@ -22,6 +22,43 @@ NodeEdge::Start(node) => {
                                 ElementId::Path => {
                                 }
                                 ElementId::Circle => {
+                                    let mut cx = 0.;
+                                    let mut cy = 0.;
+                                    let mut r = 1.;
+                                    if let Some(AttributeValue::Length(Length {
+                                        num: v, ..
+                                    })) = node.attribute_value(AttributeId::Cx) {
+                                        cx = v as f32;
+                                    }
+
+                                    if let Some(AttributeValue::Length(Length {
+                                        num: v, ..
+                                    })) = node.attribute_value(AttributeId::Cy) {
+                                        cy = v as f32;
+                                    }
+
+                                    if let Some(AttributeValue::Length(Length {
+                                        num: v, ..
+                                    })) = node.attribute_value(AttributeId::R) {
+                                        r = v as f32;
+                                    }
+                                    
+                                    if r > 0. {
+                                        let rxry = vec2(r, r);
+                                        let x_axis_rotation = rad(0.);
+                                        let arc_flags = ArcFlags {
+                                            large_arc: false,
+                                            sweep: true,
+                                        };
+                                        path.move_to(vec2(cx + r, cy));
+                                        path.arc_to( vec2(cx - r, cy),
+                                            rxry, x_axis_rotation, arc_flags);
+                                        path.arc_to(vec2(cx + r, cy),
+                                            rxry, x_axis_rotation, arc_flags);
+                                        path.close();
+                                    } else if r < 0. {
+                                        // error
+                                    }
                                 }
                                 ElementId::Rect => {
                                     let mut x = 0.;
