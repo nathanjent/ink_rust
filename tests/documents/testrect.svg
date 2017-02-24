@@ -64,10 +64,11 @@
      cx="156.23047"
      cy="167.06055"
      r="36.494141" />
-  <circle
+  <ellipse
      style="fill:#4ad852;fill-opacity:0.8;stroke:#0917df;stroke-width:6;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="path4137"
      cx="264.62888"
      cy="90.156242"
-     r="39.423828" />
+     ry="39.423828"
+     rx="30.423828" />
 </svg>
