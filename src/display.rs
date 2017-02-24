@@ -188,7 +188,8 @@ pub fn load(app: &mut InkApp) -> Result<()> {
     let mut builder = SvgPathBuilder::new(Path::builder());
 
     // TODO build from SVG file
-    svg_builder::build_path_from_dom(&app.dom, &mut builder).chain_err(|| "Path build from dom error.")?;
+    svg_builder::build_path_from_dom(&app.dom, &mut builder)
+        .chain_err(|| "Path build from dom error.")?;
     //build_logo_path(&mut builder);
 
     let path = builder.build();

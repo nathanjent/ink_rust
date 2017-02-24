@@ -148,6 +148,6 @@ pub fn parse(svg_str: &[u8]) -> Result<()> {
             bail!("SVG parsing error.");
         }
     }
-    println!("{:?}", elements);
+    //println!("{:?}", elements);
     Ok(())
 }

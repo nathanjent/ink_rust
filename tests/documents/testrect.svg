@@ -7,12 +7,12 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="1920"
-   height="1080"
-   viewBox="0 0 1920 1080"
+   width="700"
+   height="700"
+   viewBox="0 0 656.25 656.25"
    id="svg2"
    version="1.1"
-   inkscape:version="0.91 r13725"
+   inkscape:version="0.92.0 r"
    sodipodi:docname="testrect.svg">
   <metadata
      id="metadata7">
@@ -22,6 +22,8 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -35,38 +37,37 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.28"
-     inkscape:cx="57.367665"
-     inkscape:cy="893.14196"
+     inkscape:cx="374.58006"
+     inkscape:cy="423.18957"
      inkscape:document-units="px"
      inkscape:current-layer="svg2"
      showgrid="false"
      inkscape:window-width="1920"
-     inkscape:window-height="1017"
-     inkscape:window-x="-8"
-     inkscape:window-y="-8"
+     inkscape:window-height="1028"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1" />
   <rect
-     x="10"
-     y="10"
-     rx="5"
-     ry="5"
-     height="100"
+     x="45.15625"
+     y="63.789059"
+     rx="9.2114258"
+     ry="7.3071289"
+     height="146.14258"
      id="bgfill057"
-     style="fill:#A7CCD8;fill-opacity:0.8;stroke:#0917df;stroke-opacity:1"
-     width="100" />
-     <!--
+     style="fill:#a7ccd8;fill-opacity:0.8;stroke:#0917df;stroke-width:1;stroke-opacity:1"
+     width="184.22852" />
+  <!--
      -->
-  <ellipse
+  <circle
      style="fill:#4ad852;fill-opacity:1;stroke:#1723d1;stroke-width:3;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="path4135"
-     cx="20"
-     cy="10"
-     rx="5"
-     ry="5" />
+     cx="156.23047"
+     cy="167.06055"
+     r="36.494141" />
   <circle
      style="fill:#4ad852;fill-opacity:0.8;stroke:#0917df;stroke-width:6;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="path4137"
-     cx="20"
-     cy="10"
-     r="5" />
+     cx="264.62888"
+     cy="90.156242"
+     r="39.423828" />
 </svg>
