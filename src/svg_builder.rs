@@ -1,6 +1,5 @@
 use errors::*;
-use lyon::math::*;
-use lyon::tessellation::geometry_builder::{VertexConstructor, VertexBuffers, BuffersBuilder};
+use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 use lyon::tessellation::basic_shapes::*;
 use lyon::path::Path;
 use lyon::path_iterator::PathIterator;
@@ -25,8 +24,8 @@ pub fn fill_buffer_from_dom(app: &InkApp,
     if let Some(svg) = app.dom.svg_element() {
         let mut traversal = svg.traverse();
         loop {
-            if let Some(nodeEdge) = traversal.next() {
-                match nodeEdge {
+            if let Some(node_edge) = traversal.next() {
+                match node_edge {
                     NodeEdge::Start(node) => {
                         println!("{:?}", node);
                         match node.node_type() {
@@ -35,6 +34,8 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                     println!("{:?}", tag_id);
                                     match tag_id {
                                         ElementId::Path => {
+                                            let mut fill_color = [0.9, 0.9, 1.0];
+                                            let mut stroke_color = [0.0, 0.0, 0.0];
                                             if let Some(AttributeValue::Path(path::Path {
                                                 d: segments
                                             })) = node.attribute_value(AttributeId::Path) {
@@ -42,14 +43,41 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                                     &mut builder);
                                             }
 
-                                            let fill_color = display::WithColor([0.9, 0.9, 1.0]);
-                                            let stroke_color = display::WithColor([0.0, 0.0, 0.0]);
-                                            build_buffers(&mut builder, buffers, stroke_color, fill_color, app.show_points);
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Fill) {
+                                                fill_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Stroke) {
+                                                stroke_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+
+                                            build_buffers(&mut builder,
+                                                          buffers,
+                                                          stroke_color,
+                                                          fill_color,
+                                                          app.show_points)
+                                                .chain_err(|| "Build buffers error")?;
                                         }
                                         ElementId::Circle => {
                                             let mut cx = 0.;
                                             let mut cy = 0.;
                                             let mut r = 1.;
+                                            let mut fill_color = [1., 1., 1.];
+                                            let mut stroke_color = [0., 0., 0.];
                                             if let Some(AttributeValue::Length(Length {
                                                 num: v, ..
                                             })) = node.attribute_value(AttributeId::Cx) {
@@ -67,17 +95,51 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                             })) = node.attribute_value(AttributeId::R) {
                                                 r = v as f32;
                                             }
-                                            build_ellipse(cx, cy, r, r, &mut builder);
 
-                                            let fill_color = display::WithColor([0.9, 0.9, 1.0]);
-                                            let stroke_color = display::WithColor([0.0, 0.0, 0.0]);
-                                            build_buffers(&mut builder, buffers, stroke_color, fill_color, app.show_points);
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Fill) {
+                                                fill_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Stroke) {
+                                                stroke_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+
+                                            if let Some(AttributeValue::String(style_str)) =
+                                                node.attribute_value(AttributeId::Style) {
+                                                parse_style(style_str);
+                                            }
+
+                                            build_ellipse(cx, cy, r, r, &mut builder)
+                                                .chain_err(|| "Build ellipse error")?;
+
+                                            build_buffers(&mut builder,
+                                                          buffers,
+                                                          stroke_color,
+                                                          fill_color,
+                                                          app.show_points)
+                                                .chain_err(|| "Build buffers error")?;
                                         }
                                         ElementId::Ellipse => {
                                             let mut cx = 0.;
                                             let mut cy = 0.;
                                             let mut rx = 1.;
                                             let mut ry = 1.;
+                                            let mut fill_color = [0.9, 0.9, 1.0];
+                                            let mut stroke_color = [0.0, 0.0, 0.0];
                                             if let Some(AttributeValue::Length(Length {
                                                 num: v, ..
                                             })) = node.attribute_value(AttributeId::Cx) {
@@ -101,11 +163,36 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                             })) = node.attribute_value(AttributeId::Ry) {
                                                 ry = v as f32;
                                             }
-                                            build_ellipse(cx, cy, rx, ry, &mut builder);
 
-                                            let fill_color = display::WithColor([0.9, 0.9, 1.0]);
-                                            let stroke_color = display::WithColor([0.0, 0.0, 0.0]);
-                                            build_buffers(&mut builder, buffers, stroke_color, fill_color, app.show_points);
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Fill) {
+                                                fill_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Stroke) {
+                                                stroke_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+                                            build_ellipse(cx, cy, rx, ry, &mut builder)
+                                                .chain_err(|| "Build ellipse error")?;
+                                            build_buffers(&mut builder,
+                                                          buffers,
+                                                          stroke_color,
+                                                          fill_color,
+                                                          app.show_points)
+                                                .chain_err(|| "Build buffers error")?;
                                         }
                                         ElementId::Rect => {
                                             let mut x = 0.;
@@ -115,6 +202,8 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                             let mut w = 1.;
                                             let mut h = 1.;
                                             let mut transform = None;
+                                            let mut fill_color = [0.9, 0.9, 1.0];
+                                            let mut stroke_color = [0.0, 0.0, 0.0];
                                             if let Some(AttributeValue::Length(Length {
                                                 num: v, ..
                                             })) = node.attribute_value(AttributeId::X) {
@@ -151,6 +240,28 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                 ry = v as f32;
                                             }
 
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Fill) {
+                                                fill_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+
+                                            if let Some(AttributeValue::Color(Color {
+                                                red: r,
+                                                green: g,
+                                                blue: b,
+                                            })) = node.attribute_value(AttributeId::Stroke) {
+                                                stroke_color = [
+                                                    r as f32 / 256.,
+                                                    g as f32 / 256.,
+                                                    b as f32 / 256.,];
+                                            }
+
                                             if let Some(AttributeValue::Transform(t)) =
                                                 node.attribute_value(AttributeId::Transform) {
                                                 transform = Some(t);
@@ -173,36 +284,28 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                 sweep: true,
                                             };
 
-                                            println!("x:{:?} y:{:?} w:{:?} h:{:?} rx:{:?} ry:{:?}",
-                                                     x,
-                                                     y,
-                                                     w,
-                                                     h,
-                                                     rx,
-                                                     ry);
-
                                             builder.move_to(vec2(x + rx, y));
                                             builder.line_to(vec2(x + w - rx, y));
                                             builder.line_to(vec2(x + w - rx, y));
                                             builder.arc_to(vec2(x + w, y + ry),
-                                                        rxry,
-                                                        x_axis_rotation,
-                                                        arc_flags);
+                                                           rxry,
+                                                           x_axis_rotation,
+                                                           arc_flags);
                                             builder.line_to(vec2(x + w, y + h - ry));
                                             builder.arc_to(vec2(x + w - rx, y + h),
-                                                        rxry,
-                                                        x_axis_rotation,
-                                                        arc_flags);
+                                                           rxry,
+                                                           x_axis_rotation,
+                                                           arc_flags);
                                             builder.line_to(vec2(x + rx, y + h));
                                             builder.arc_to(vec2(x, y + h - ry),
-                                                        rxry,
-                                                        x_axis_rotation,
-                                                        arc_flags);
+                                                           rxry,
+                                                           x_axis_rotation,
+                                                           arc_flags);
                                             builder.line_to(vec2(x, y + ry));
                                             builder.arc_to(vec2(x + rx, y),
-                                                        rxry,
-                                                        x_axis_rotation,
-                                                        arc_flags);
+                                                           rxry,
+                                                           x_axis_rotation,
+                                                           arc_flags);
                                             builder.close();
 
                                             //TODO apply transform
@@ -213,12 +316,20 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                                 d: d,
                                                                 e: e,
                                                                 f: f } = t;
-                                                println!("{:?}", t);
+                                                println!("{:?},{:?},{:?},{:?},{:?},{:?}",
+                                                         a,
+                                                         b,
+                                                         c,
+                                                         d,
+                                                         e,
+                                                         f);
                                             }
-
-                                            let fill_color = display::WithColor([0.9, 0.9, 1.0]);
-                                            let stroke_color = display::WithColor([0.0, 0.0, 0.0]);
-                                            build_buffers(&mut builder, buffers, stroke_color, fill_color, app.show_points);
+                                            build_buffers(&mut builder,
+                                                          buffers,
+                                                          stroke_color,
+                                                          fill_color,
+                                                          app.show_points)
+                                                .chain_err(|| "Build buffers error")?;
                                         }
                                         _ => {}
                                     }
@@ -364,41 +475,45 @@ fn build_from_segments<Builder: SvgBuilder>(segments: &[path::Segment],
 
 fn build_buffers<Builder: SvgBuilder<PathType=Path>>(builder: &mut Builder,
                                       buffers: &mut VertexBuffers<display::Vertex>,
-                                      stroke_color: display::WithColor,
-                                      fill_color: display::WithColor,
+                                      stroke_color: [f32; 3],
+                                      fill_color: [f32; 3],
                                       show_points: bool)
 -> Result<()> {
     let path: Path = builder.build_and_reset();
 
     let events = FillEvents::from_iter(path.path_iter()
         .flattened(0.03));
-    FillTessellator::new().tessellate_events(&events,
-                                             &FillOptions::default(),
-                                             &mut BuffersBuilder::new(buffers, fill_color))
+    FillTessellator::new()
+        .tessellate_events(&events,
+                           &FillOptions::default(),
+                           &mut BuffersBuilder::new(buffers, display::WithColor(fill_color)))
         .unwrap();
 
     StrokeTessellator::new()
         .tessellate(path.path_iter().flattened(0.03),
                     &StrokeOptions::stroke_width(1.0),
 
-                    &mut BuffersBuilder::new(buffers,
-                                             stroke_color))
+                    &mut BuffersBuilder::new(buffers, display::WithColor(stroke_color)))
         .unwrap();
-                                            if show_points {
-                                                for p in path.as_slice().iter() {
-                                                    if let Some(to) = p.destination() {
-                                                        tessellate_ellipsis(to,
-                                                                            vec2(1.0, 1.0),
-                                                                            16,
-                                                                            &mut BuffersBuilder::new(buffers,
-                                                                                                     display::WithColor([0.0, 0.0, 0.0])));
-                                                        tessellate_ellipsis(to,
-                                                                            vec2(0.5, 0.5),
-                                                                            16,
-                                                                            &mut BuffersBuilder::new(buffers,
-                                                                                                     display::WithColor([0.0, 1.0, 0.0])));
-                                                    }
-                                                }
-                                            }
+    if show_points {
+        for p in path.as_slice().iter() {
+            if let Some(to) = p.destination() {
+                tessellate_ellipsis(to,
+                                    vec2(1.0, 1.0),
+                                    16,
+                                    &mut BuffersBuilder::new(buffers,
+                                                             display::WithColor([0.0, 0.0, 0.0])));
+                tessellate_ellipsis(to,
+                                    vec2(0.5, 0.5),
+                                    16,
+                                    &mut BuffersBuilder::new(buffers,
+                                                             display::WithColor([0.0, 1.0, 0.0])));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn parse_style(style_str: String) -> Result<()> {
     Ok(())
 }

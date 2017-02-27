@@ -57,7 +57,7 @@ fn run() -> Result<()> {
     //let matches = App::from_yaml(yaml).get_matches();
 
     let mut ink_app = InkApp::new();
-    let mut filename = "tests/documents/testrect.svg";
+    let filename = "tests/documents/testrect.svg";
     //if let Some(f) = matches.value_of("INPUT") {
     //    filename = f;
     //}

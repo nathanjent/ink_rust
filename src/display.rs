@@ -12,15 +12,9 @@ use glium::glutin;
 use glium::index::PrimitiveType;
 use glium::{DisplayBuild, Surface};
 
-use lyon::extra::rust_logo::build_logo_path;
-use lyon::path_builder::*;
 use lyon::math::*;
 use lyon::tessellation::geometry_builder::{VertexConstructor, VertexBuffers, BuffersBuilder};
 use lyon::tessellation::basic_shapes::*;
-use lyon::tessellation::path_fill::{FillEvents, FillTessellator, FillOptions};
-use lyon::tessellation::path_stroke::{StrokeTessellator, StrokeOptions};
-use lyon::path::Path;
-use lyon::path_iterator::PathIterator;
 
 use find_folder;
 use std;
@@ -150,7 +144,8 @@ pub fn load(app: &mut InkApp) -> Result<()> {
 
     //        match event {
     //            // Break from the loop upon `Escape`.
-    //            glium::glutin::Event::KeyboardInput(_, _, Some(glium::glutin::VirtualKeyCode::Escape)) |
+    //            glium::glutin::Event::KeyboardInput(_, _,
+    //            Some(glium::glutin::VirtualKeyCode::Escape)) |
     //            glium::glutin::Event::Closed => break 'main,
     //            _ => {}
     //        }
@@ -269,7 +264,8 @@ pub fn load(app: &mut InkApp) -> Result<()> {
                 in vec3 a_color;
                 out vec3 v_color;
                 void main() {
-                    gl_Position = u_matrix * vec4(a_position, 0.0, 1.0);// / vec4(u_resolution, 1.0, 1.0);
+                    gl_Position = u_matrix * vec4(a_position, 0.0, 1.0);
+                                        // / vec4(u_resolution, 1.0, 1.0);
                     v_color = a_color;
                 }
             ",
@@ -282,7 +278,8 @@ pub fn load(app: &mut InkApp) -> Result<()> {
                 }
             "
         },
-    ).unwrap();
+    )
+        .unwrap();
 
     let mut target_zoom = 1.0;
     let mut zoom = 1.0;

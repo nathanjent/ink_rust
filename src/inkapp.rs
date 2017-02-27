@@ -54,7 +54,6 @@ impl InkApp {
         let mut file = File::open(&file).chain_err(|| "Unable to open file")?;
         let t = load_file(&mut file).chain_err(|| "Unable to load file")?;
 
-        let svg = svg_parser::parse(&t);
         self.dom = match Document::from_data(&t) {
             Ok(doc) => doc,
             Err(e) => bail!("SVG parse error: {}", e),
@@ -64,7 +63,7 @@ impl InkApp {
     }
 
     pub fn start(&mut self) -> Result<()> {
-        display::load(self);
+        display::load(self).chain_err(|| "Unable to load display")?;
         Ok(())
     }
 
