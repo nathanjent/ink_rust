@@ -22,6 +22,7 @@ pub struct InkApp {
 
     // Upon drawing, we draw once more in the next frame
     redraw_echo_queued: bool,
+    pub show_points: bool,
     pub dom: Document,
 }
 
@@ -44,6 +45,7 @@ impl InkApp {
             rebuild_queued: false,
             redraw_queued: false,
             redraw_echo_queued: false,
+            show_points: false,
             dom: Document::default(),
         }
     }

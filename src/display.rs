@@ -25,17 +25,16 @@ use lyon::path_iterator::PathIterator;
 use find_folder;
 use std;
 
-
 use inkapp::InkApp;
 use svg_builder;
 
 #[derive(Copy, Clone, Debug)]
-struct Vertex {
+pub struct Vertex {
     a_position: [f32; 2],
     a_color: [f32; 3],
 }
 
-struct WithColor([f32; 3]);
+pub struct WithColor(pub [f32; 3]);
 
 impl VertexConstructor<Vec2, Vertex> for WithColor {
     fn new_vertex(&mut self, pos: Vec2) -> Vertex {
@@ -184,83 +183,39 @@ pub fn load(app: &mut InkApp) -> Result<()> {
     //            .chain_err(|| "Could not finish {}")?;
     //    }
     //}
-    
-    let mut builder = SvgPathBuilder::new(Path::builder());
-
-    // TODO build from SVG file
-    svg_builder::build_path_from_dom(&app.dom, &mut builder)
-        .chain_err(|| "Path build from dom error.")?;
-    //build_logo_path(&mut builder);
-
-    let path = builder.build();
 
     let mut buffers: VertexBuffers<Vertex> = VertexBuffers::new();
 
-    let events = FillEvents::from_iter(path.path_iter().flattened(0.03));
-
-    FillTessellator::new().tessellate_events(
-        &events,
-        &FillOptions::default(),
-        &mut BuffersBuilder::new(&mut buffers, WithColor([0.9, 0.9, 1.0]))
-    ).unwrap();
-
-    StrokeTessellator::new().tessellate(
-        path.path_iter().flattened(0.03),
-        &StrokeOptions::stroke_width(1.0),
-        &mut BuffersBuilder::new(&mut buffers, WithColor([0.0, 0.0, 0.0]))
-    ).unwrap();
-
-    let show_points = false;
-
-    if show_points {
-        for p in path.as_slice().iter() {
-            if let Some(to) = p.destination() {
-                tessellate_ellipsis(to, vec2(1.0, 1.0), 16,
-                    &mut BuffersBuilder::new(&mut buffers,
-                        WithColor([0.0, 0.0, 0.0])
-                    )
-                );
-                tessellate_ellipsis(to, vec2(0.5, 0.5), 16,
-                    &mut BuffersBuilder::new(&mut buffers,
-                        WithColor([0.0, 1.0, 0.0])
-                    )
-                );
-            }
-        }
-    }
+    svg_builder::fill_buffer_from_dom(&app, &mut buffers)
+        .chain_err(|| "Path build from dom error.")?;
 
     let (indices, vertices) = (buffers.indices, buffers.vertices);
-
     println!(" -- {} vertices {} indices", vertices.len(), indices.len());
 
     let mut bg_buffers: VertexBuffers<BgVertex> = VertexBuffers::new();
-    tessellate_rectangle(
-        &Rect::new(vec2(-1.0, -1.0), size(2.0, 2.0)),
-        &mut BuffersBuilder::new(&mut bg_buffers, BgWithColor )
-    );
+    tessellate_rectangle(&Rect::new(vec2(-1.0, -1.0), size(2.0, 2.0)),
+                         &mut BuffersBuilder::new(&mut bg_buffers, BgWithColor));
 
     // building the display, ie. the main object
     let display = glutin::WindowBuilder::new()
         .with_dimensions(700, 700)
-        .with_title("tessellation".to_string())
+        .with_title("Inkrust".to_string())
         // NoAvailablePixelFormat error when uncommented
         //.with_multisampling(8)
         .with_vsync()
         .build_glium()
         .unwrap();
-        //.chain_err(|| "Could not build display")?;
+    //.chain_err(|| "Could not build display")?;
 
     let model_vbo = glium::VertexBuffer::new(&display, &vertices[..]).unwrap();
-    let model_ibo = glium::IndexBuffer::new(
-        &display, PrimitiveType::TrianglesList,
-        &indices[..]
-    ).unwrap();
+    let model_ibo = glium::IndexBuffer::new(&display, PrimitiveType::TrianglesList, &indices[..])
+        .unwrap();
 
     let bg_vbo = glium::VertexBuffer::new(&display, &bg_buffers.vertices[..]).unwrap();
-    let bg_ibo = glium::IndexBuffer::new(
-        &display, PrimitiveType::TrianglesList,
-        &bg_buffers.indices[..]
-    ).unwrap();
+    let bg_ibo = glium::IndexBuffer::new(&display,
+                                         PrimitiveType::TrianglesList,
+                                         &bg_buffers.indices[..])
+        .unwrap();
 
     // compiling shaders and linking them together
     let bg_program = program!(&display,
@@ -300,7 +255,8 @@ pub fn load(app: &mut InkApp) -> Result<()> {
                 }
             "
         },
-    ).unwrap();
+    )
+        .unwrap();
 
     // compiling shaders and linking them together
     let model_program = program!(&display,
@@ -346,7 +302,7 @@ pub fn load(app: &mut InkApp) -> Result<()> {
 
         view_mat = view_mat.pre_translated(-1.0, 1.0, 0.0);
         view_mat = view_mat.pre_scaled(5.0 * zoom, 5.0 * zoom, 0.0);
-        view_mat = view_mat.pre_scaled(2.0/resolution.x, -2.0/resolution.y, 1.0);
+        view_mat = view_mat.pre_scaled(2.0 / resolution.x, -2.0 / resolution.y, 1.0);
         view_mat = view_mat.pre_translated(pos.x, pos.y, 0.0);
 
         let uniforms = uniform! {
@@ -355,16 +311,18 @@ pub fn load(app: &mut InkApp) -> Result<()> {
         };
 
         target.clear_color(0.75, 0.75, 0.75, 1.0);
-        target.draw(
-            &bg_vbo, &bg_ibo,
-            &bg_program, &uniforms,
-            &Default::default()
-        ).unwrap();
-        target.draw(
-            &model_vbo, &model_ibo,
-            &model_program, &uniforms,
-            &Default::default()
-        ).unwrap();
+        target.draw(&bg_vbo,
+                  &bg_ibo,
+                  &bg_program,
+                  &uniforms,
+                  &Default::default())
+            .unwrap();
+        target.draw(&model_vbo,
+                  &model_ibo,
+                  &model_program,
+                  &uniforms,
+                  &Default::default())
+            .unwrap();
         target.finish().unwrap();
 
         let mut should_close = false;
@@ -406,6 +364,6 @@ pub fn load(app: &mut InkApp) -> Result<()> {
             break;
         }
     }
-    
+
     Ok(())
 }
