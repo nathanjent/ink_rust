@@ -27,18 +27,20 @@ pub fn fill_buffer_from_dom(app: &InkApp,
             if let Some(node_edge) = traversal.next() {
                 match node_edge {
                     NodeEdge::Start(node) => {
-                        println!("{:?}", node);
+                        //println!("{:?}", node);
                         match node.node_type() {
                             NodeType::Element => {
                                 if let Some(tag_id) = node.tag_id() {
                                     println!("{:?}", tag_id);
                                     match tag_id {
                                         ElementId::Path => {
-                                            let mut fill_color = [0.9, 0.9, 1.0];
-                                            let mut stroke_color = [0.0, 0.0, 0.0];
+                                            let mut fill_color =  app.current_style.fill;
+                                            let mut stroke_color = app.current_style.stroke;
+
                                             if let Some(AttributeValue::Path(path::Path {
                                                 d: segments
-                                            })) = node.attribute_value(AttributeId::Path) {
+                                            })) = node.attribute_value(AttributeId::D) {
+                                                println!("{:?}", segments);
                                                 build_from_segments(&segments[..],
                                                                     &mut builder);
                                             }
@@ -69,15 +71,15 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
-                                                          app.show_points)
+                                                          app.current_style.show_points)
                                                 .chain_err(|| "Build buffers error")?;
                                         }
                                         ElementId::Circle => {
                                             let mut cx = 0.;
                                             let mut cy = 0.;
                                             let mut r = 1.;
-                                            let mut fill_color = [1., 1., 1.];
-                                            let mut stroke_color = [0., 0., 0.];
+                                            let mut fill_color =  app.current_style.fill;
+                                            let mut stroke_color = app.current_style.stroke;
                                             if let Some(AttributeValue::Length(Length {
                                                 num: v, ..
                                             })) = node.attribute_value(AttributeId::Cx) {
@@ -118,11 +120,6 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                     b as f32 / 256.,];
                                             }
 
-                                            if let Some(AttributeValue::String(style_str)) =
-                                                node.attribute_value(AttributeId::Style) {
-                                                parse_style(style_str);
-                                            }
-
                                             build_ellipse(cx, cy, r, r, &mut builder)
                                                 .chain_err(|| "Build ellipse error")?;
 
@@ -130,7 +127,7 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
-                                                          app.show_points)
+                                                          app.current_style.show_points)
                                                 .chain_err(|| "Build buffers error")?;
                                         }
                                         ElementId::Ellipse => {
@@ -138,8 +135,8 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                             let mut cy = 0.;
                                             let mut rx = 1.;
                                             let mut ry = 1.;
-                                            let mut fill_color = [0.9, 0.9, 1.0];
-                                            let mut stroke_color = [0.0, 0.0, 0.0];
+                                            let mut fill_color =  app.current_style.fill;
+                                            let mut stroke_color = app.current_style.stroke;
                                             if let Some(AttributeValue::Length(Length {
                                                 num: v, ..
                                             })) = node.attribute_value(AttributeId::Cx) {
@@ -191,7 +188,7 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
-                                                          app.show_points)
+                                                          app.current_style.show_points)
                                                 .chain_err(|| "Build buffers error")?;
                                         }
                                         ElementId::Rect => {
@@ -202,8 +199,8 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                             let mut w = 1.;
                                             let mut h = 1.;
                                             let mut transform = None;
-                                            let mut fill_color = [0.9, 0.9, 1.0];
-                                            let mut stroke_color = [0.0, 0.0, 0.0];
+                                            let mut fill_color =  app.current_style.fill;
+                                            let mut stroke_color = app.current_style.stroke;
                                             if let Some(AttributeValue::Length(Length {
                                                 num: v, ..
                                             })) = node.attribute_value(AttributeId::X) {
@@ -328,7 +325,7 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
-                                                          app.show_points)
+                                                          app.current_style.show_points)
                                                 .chain_err(|| "Build buffers error")?;
                                         }
                                         _ => {}
@@ -378,6 +375,7 @@ fn build_from_segments<Builder: SvgBuilder>(segments: &[path::Segment],
                                             path: &mut Builder)
                                             -> Result<()> {
     for segment in segments {
+        println!("{:?}", segment);
         match *segment.data() {
             path::SegmentData::MoveTo { x, y } => {
                 let xy = vec2(x as f32, y as f32);
@@ -511,9 +509,5 @@ fn build_buffers<Builder: SvgBuilder<PathType=Path>>(builder: &mut Builder,
             }
         }
     }
-    Ok(())
-}
-
-fn parse_style(style_str: String) -> Result<()> {
     Ok(())
 }

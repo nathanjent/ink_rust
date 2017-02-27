@@ -10,8 +10,6 @@ use svg_parser;
 use display;
 
 pub struct InkApp {
-    // pub dom: SVGDom,
-    renderables: Vec<RenderShape>,
     // ui: Ui,
     view: [f64; 4], // [x, y, width, height]
     window: [u32; 2], // [width, height]
@@ -22,30 +20,19 @@ pub struct InkApp {
 
     // Upon drawing, we draw once more in the next frame
     redraw_echo_queued: bool,
-    pub show_points: bool,
+    pub current_style: Style,
     pub dom: Document,
-}
-
-pub enum RenderShape {
-    Rectangle,
-    Line,
-    Ellipse,
-    CircleArc,
-    Image,
-    Polygon,
-    Text,
 }
 
 impl InkApp {
     pub fn new() -> Self {
         InkApp {
-            renderables: Vec::new(),
             view: [-10., -10., 600., 400.],
             window: [640, 480],
             rebuild_queued: false,
             redraw_queued: false,
             redraw_echo_queued: false,
-            show_points: false,
+            current_style: Style::new(),
             dom: Document::default(),
         }
     }
@@ -66,9 +53,21 @@ impl InkApp {
         display::load(self).chain_err(|| "Unable to load display")?;
         Ok(())
     }
+}
 
-    pub fn add_renderable(&mut self, renderable: RenderShape) {
-        self.renderables.push(renderable);
+pub struct Style {
+    pub show_points: bool,
+    pub fill: [f32; 3],
+    pub stroke: [f32; 3],
+}
+
+impl Style {
+    pub fn new() -> Self {
+        Style {
+            show_points: false,
+            fill: [1., 1., 1.],
+            stroke: [0., 0., 0.],
+        }
     }
 }
 

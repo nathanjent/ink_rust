@@ -12,7 +12,7 @@
    viewBox="0 0 656.25 656.25"
    id="svg2"
    version="1.1"
-   inkscape:version="0.92.1 r"
+   inkscape:version="0.91 r13725"
    sodipodi:docname="testrect.svg">
   <metadata
      id="metadata7">
@@ -37,16 +37,16 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.28"
-     inkscape:cx="228.48631"
-     inkscape:cy="423.5802"
+     inkscape:cx="111.68944"
+     inkscape:cy="579.8302"
      inkscape:document-units="px"
      inkscape:current-layer="svg2"
      showgrid="false"
-     inkscape:window-width="1920"
-     inkscape:window-height="1028"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1" />
+     inkscape:window-width="1164"
+     inkscape:window-height="746"
+     inkscape:window-x="367"
+     inkscape:window-y="210"
+     inkscape:window-maximized="0" />
   <rect
      x="45.15625"
      y="63.789059"
@@ -72,8 +72,10 @@
      ry="39.423828"
      rx="30.423828" />
   <path
-     style="fill:#500c58;fill-rule:evenodd;stroke:#ffffff;stroke-width:2.8125;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:0.80000001;stroke-miterlimit:4;stroke-dasharray:none"
-     d="M 156.73828,109.86328 C 123.04688,93.75 101.80664,169.18945 153.07617,170.6543 204.3457,172.11914 274.6582,131.10352 267.33398,90.087891 260.00977,49.072266 183.10547,35.15625 136.96289,43.945312"
-     id="path4492"
-     inkscape:connector-curvature="0" />
+     style="fill:#e8eb26;fill-opacity:1;fill-rule:evenodd;stroke:#e20000;stroke-width:0.93749994px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     d="m 65.917965,195.55663 c 0.732422,-33.6914 61.523435,-52.00195 65.917965,-7.32422 7.32422,33.69141 -53.466794,56.39648 -65.917965,7.32422 z"
+     id="path4138"
+     inkscape:connector-curvature="0"
+     inkscape:transform-center-x="1.4637735"
+     inkscape:transform-center-y="3.1591106" />
 </svg>
