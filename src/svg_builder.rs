@@ -1,9 +1,10 @@
 use errors::*;
 use lyon::tessellation::geometry_builder::{VertexBuffers, BuffersBuilder};
 use lyon::tessellation::basic_shapes::*;
-use lyon::path::Path;
-use lyon::path_iterator::PathIterator;
+use lyon::path::{Path, Verb, PathIter};
+use lyon::path_iterator::{FlatteningIter, PathIterator, PathStateIter};
 use lyon::lyon_core::ArcFlags;
+use lyon::lyon_core::SvgEvent;
 use lyon::math::{point, rad, vec2};
 use lyon::path_builder::*;
 use lyon::tessellation::path_fill::{FillEvents, FillTessellator, FillOptions};
@@ -67,7 +68,7 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                     b as f32 / 256.,];
                                             }
 
-                                            build_buffers(&mut builder,
+                                            build_path_buffers(&mut builder,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
@@ -123,7 +124,7 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                             build_ellipse(cx, cy, r, r, &mut builder)
                                                 .chain_err(|| "Build ellipse error")?;
 
-                                            build_buffers(&mut builder,
+                                            build_path_buffers(&mut builder,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
@@ -184,7 +185,7 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                             }
                                             build_ellipse(cx, cy, rx, ry, &mut builder)
                                                 .chain_err(|| "Build ellipse error")?;
-                                            build_buffers(&mut builder,
+                                            build_path_buffers(&mut builder,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
@@ -321,7 +322,7 @@ pub fn fill_buffer_from_dom(app: &InkApp,
                                                          e,
                                                          f);
                                             }
-                                            build_buffers(&mut builder,
+                                            build_path_buffers(&mut builder,
                                                           buffers,
                                                           stroke_color,
                                                           fill_color,
@@ -372,7 +373,7 @@ fn build_ellipse<Builder: SvgBuilder>(cx: f32,
 }
 
 fn build_from_segments<Builder: SvgBuilder>(segments: &[path::Segment],
-                                            path: &mut Builder)
+                                            builder: &mut Builder)
                                             -> Result<()> {
     for segment in segments {
         println!("{:?}", segment);
@@ -380,31 +381,31 @@ fn build_from_segments<Builder: SvgBuilder>(segments: &[path::Segment],
             path::SegmentData::MoveTo { x, y } => {
                 let xy = vec2(x as f32, y as f32);
                 if segment.is_absolute() {
-                    path.move_to(xy);
+                    builder.move_to(xy);
                 } else {
-                    path.relative_move_to(xy);
+                    builder.relative_move_to(xy);
                 }
             }
             path::SegmentData::LineTo { x, y } => {
                 let xy = vec2(x as f32, y as f32);
                 if segment.is_absolute() {
-                    path.line_to(xy);
+                    builder.line_to(xy);
                 } else {
-                    path.relative_line_to(xy);
+                    builder.relative_line_to(xy);
                 }
             }
             path::SegmentData::HorizontalLineTo { x } => {
                 if segment.is_absolute() {
-                    path.horizontal_line_to(x as f32);
+                    builder.horizontal_line_to(x as f32);
                 } else {
-                    path.relative_horizontal_line_to(x as f32);
+                    builder.relative_horizontal_line_to(x as f32);
                 }
             }
             path::SegmentData::VerticalLineTo { y } => {
                 if segment.is_absolute() {
-                    path.vertical_line_to(y as f32);
+                    builder.vertical_line_to(y as f32);
                 } else {
-                    path.relative_vertical_line_to(y as f32);
+                    builder.relative_vertical_line_to(y as f32);
                 }
             }
             path::SegmentData::CurveTo { x1, y1, x2, y2, x, y } => {
@@ -412,35 +413,35 @@ fn build_from_segments<Builder: SvgBuilder>(segments: &[path::Segment],
                 let x2y2 = vec2(x2 as f32, y2 as f32);
                 let xy = vec2(x as f32, y as f32);
                 if segment.is_absolute() {
-                    path.cubic_bezier_to(x1y1, x2y2, xy);
+                    builder.cubic_bezier_to(x1y1, x2y2, xy);
                 } else {
-                    path.relative_cubic_bezier_to(x1y1, x2y2, xy);
+                    builder.relative_cubic_bezier_to(x1y1, x2y2, xy);
                 }
             }
             path::SegmentData::SmoothCurveTo { x2, y2, x, y } => {
                 let x2y2 = vec2(x2 as f32, y2 as f32);
                 let xy = vec2(x as f32, y as f32);
                 if segment.is_absolute() {
-                    path.smooth_cubic_bezier_to(x2y2, xy);
+                    builder.smooth_cubic_bezier_to(x2y2, xy);
                 } else {
-                    path.smooth_relative_cubic_bezier_to(x2y2, xy);
+                    builder.smooth_relative_cubic_bezier_to(x2y2, xy);
                 }
             }
             path::SegmentData::Quadratic { x1, y1, x, y } => {
                 let x1y1 = vec2(x1 as f32, y1 as f32);
                 let xy = vec2(x as f32, y as f32);
                 if segment.is_absolute() {
-                    path.quadratic_bezier_to(x1y1, xy);
+                    builder.quadratic_bezier_to(x1y1, xy);
                 } else {
-                    path.relative_quadratic_bezier_to(x1y1, xy);
+                    builder.relative_quadratic_bezier_to(x1y1, xy);
                 }
             }
             path::SegmentData::SmoothQuadratic { x, y } => {
                 let xy = vec2(x as f32, y as f32);
                 if segment.is_absolute() {
-                    path.smooth_quadratic_bezier_to(xy);
+                    builder.smooth_quadratic_bezier_to(xy);
                 } else {
-                    path.smooth_relative_quadratic_bezier_to(xy);
+                    builder.smooth_relative_quadratic_bezier_to(xy);
                 }
             }
             path::SegmentData::EllipticalArc { rx,
@@ -458,34 +459,28 @@ fn build_from_segments<Builder: SvgBuilder>(segments: &[path::Segment],
                 let xy = vec2(x as f32, y as f32);
                 let rxry = vec2(rx as f32, ry as f32);
                 if segment.is_absolute() {
-                    path.arc_to(xy, rxry, x_axis_rotation, arc_flags);
+                    builder.arc_to(xy, rxry, x_axis_rotation, arc_flags);
                 } else {
-                    path.relative_arc_to(xy, rxry, x_axis_rotation, arc_flags);
+                    builder.relative_arc_to(xy, rxry, x_axis_rotation, arc_flags);
                 }
             }
             path::SegmentData::ClosePath => {
-                path.close();
+                builder.close();
             }
         }
     }
     Ok(())
 }
 
-fn build_buffers<Builder: SvgBuilder<PathType=Path>>(builder: &mut Builder,
+fn build_path_buffers<Builder: SvgBuilder<PathType=Path>>(builder: &mut Builder,
                                       buffers: &mut VertexBuffers<display::Vertex>,
                                       stroke_color: [f32; 3],
                                       fill_color: [f32; 3],
                                       show_points: bool)
 -> Result<()> {
-    let path: Path = builder.build_and_reset();
-
-    let events = FillEvents::from_iter(path.path_iter()
-        .flattened(0.03));
-    FillTessellator::new()
-        .tessellate_events(&events,
-                           &FillOptions::default(),
-                           &mut BuffersBuilder::new(buffers, display::WithColor(fill_color)))
-        .unwrap();
+    builder.close();
+    let mut path: Path = builder.build_and_reset();
+    let count = path.path_iter().count();
 
     StrokeTessellator::new()
         .tessellate(path.path_iter().flattened(0.03),
@@ -493,6 +488,15 @@ fn build_buffers<Builder: SvgBuilder<PathType=Path>>(builder: &mut Builder,
 
                     &mut BuffersBuilder::new(buffers, display::WithColor(stroke_color)))
         .unwrap();
+
+    let events = FillEvents::from_iter(path.path_iter().flattened(0.03));
+    FillTessellator::new()
+        .tessellate_events(&events,
+                           &FillOptions::default(),
+                           &mut BuffersBuilder::new(buffers,
+                                                    display::WithColor(fill_color)))
+        .unwrap();
+
     if show_points {
         for p in path.as_slice().iter() {
             if let Some(to) = p.destination() {
